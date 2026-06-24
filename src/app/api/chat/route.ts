@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.CHAT_AI_KEY;
+    console.log("CHAT_AI_KEY length:", apiKey?.length, "starts:", apiKey?.slice(0, 12));
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "CHAT_AI_KEY is not configured" }),
