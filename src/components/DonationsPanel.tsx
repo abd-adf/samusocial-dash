@@ -70,7 +70,6 @@ export default function DonationsPanel({
         month: monthNames[month] || month,
         "Dons uniques (€)": Math.round(Number(onceRow?.itemRevenue) || 0),
         "Dons réguliers (€)": Math.round(Number(regularRow?.itemRevenue) || 0),
-        "Don moyen (€)": Math.round(Number(totalRow?.averagePurchaseRevenue) || 0),
         "Nombre de dons": onceCount + regCount,
       };
     });
@@ -167,7 +166,7 @@ export default function DonationsPanel({
                   orientation="right"
                   tick={{ fontSize: 11, fill: "#6b7280" }}
                   domain={[0, "auto"]}
-                  label={{ value: "Dons / Don moy.", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#9ca3af" } }}
+                  label={{ value: "Nombre de dons", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#9ca3af" } }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -209,14 +208,6 @@ export default function DonationsPanel({
                   fill="#8b5cf6"
                   radius={[4, 4, 0, 0]}
                   stackId="stack"
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="Don moyen (€)"
-                  stroke="#10b981"
-                  strokeWidth={2.5}
-                  dot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
                 />
                 <Line
                   yAxisId="right"
