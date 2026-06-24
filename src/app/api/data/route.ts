@@ -12,86 +12,55 @@ export async function GET(request: NextRequest) {
   const dateTo = searchParams.get("to") || "2025-12-31";
 
   try {
-    const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, mailchimpCampaigns] =
+    // Batch 1: Facebook Ads
+    const [fbMonthly, fbCampaigns] = await Promise.all([
+      queryFacebookAds(
+        dateFrom, dateTo,
+        ["month", "spend", "impressions", "clicks", "ctr", "cpc", "actions:link_click", "cost_per_action_type:link_click", "actions:landing_page_view"],
+        ["month"],
+      ),
+      queryFacebookAds(
+        dateFrom, dateTo,
+        ["campaign_name", "spend", "impressions", "clicks", "ctr", "cpc", "actions:link_click", "cost_per_action_type:link_click", "actions:landing_page_view"],
+        ["campaign_name"],
+      ),
+    ]);
+
+    // Batch 2: GA4 + Google Ads
+    const [ga4Monthly, gadsCampaigns] = await Promise.all([
+      queryGA4(
+        dateFrom, dateTo,
+        ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"],
+        ["month"],
+      ),
+      queryGoogleAds(
+        dateFrom, dateTo,
+        ["campaign.name", "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.ctr", "metrics.average_cpc", "metrics.conversions", "metrics.conversions_value"],
+        ["campaign.name"],
+      ),
+    ]);
+
+    // Batch 3: Donations + Mailchimp
+    const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
       await Promise.all([
-        queryFacebookAds(
-          dateFrom,
-          dateTo,
-          [
-            "month",
-            "spend",
-            "impressions",
-            "clicks",
-            "ctr",
-            "cpc",
-            "actions:link_click",
-            "cost_per_action_type:link_click",
-            "actions:landing_page_view",
-          ],
-          ["month"],
-        ),
-        queryFacebookAds(
-          dateFrom,
-          dateTo,
-          [
-            "campaign_name",
-            "spend",
-            "impressions",
-            "clicks",
-            "ctr",
-            "cpc",
-            "actions:link_click",
-            "cost_per_action_type:link_click",
-            "actions:landing_page_view",
-          ],
-          ["campaign_name"],
+        queryGA4(
+          dateFrom, dateTo,
+          ["itemCategory", "itemRevenue", "itemsPurchased"],
+          ["itemCategory"],
         ),
         queryGA4(
-          dateFrom,
-          dateTo,
-          [
-            "month",
-            "sessions",
-            "activeUsers",
-            "newUsers",
-            "screenPageViews",
-            "bounceRate",
-            "averageSessionDuration",
-            "conversions",
-          ],
+          dateFrom, dateTo,
+          ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"],
           ["month"],
         ),
-        queryGoogleAds(
-          dateFrom,
-          dateTo,
-          [
-            "campaign.name",
-            "metrics.cost_micros",
-            "metrics.impressions",
-            "metrics.clicks",
-            "metrics.ctr",
-            "metrics.average_cpc",
-            "metrics.conversions",
-            "metrics.conversions_value",
-          ],
-          ["campaign.name"],
+        queryGA4(
+          dateFrom, dateTo,
+          ["month", "itemCategory", "itemRevenue", "itemsPurchased"],
+          ["month", "itemCategory"],
         ),
         queryMailchimp(
-          dateFrom,
-          dateTo,
-          [
-            "campaignName",
-            "sendTime",
-            "emailsSent",
-            "opens",
-            "uniqueOpens",
-            "openRate",
-            "clicks",
-            "uniqueClicks",
-            "clickRate",
-            "bounces",
-            "unsubscribed",
-          ],
+          dateFrom, dateTo,
+          ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"],
           ["campaignName"],
         ),
       ]);
@@ -101,6 +70,9 @@ export async function GET(request: NextRequest) {
       fbCampaigns: fbCampaigns.rows,
       ga4Monthly: ga4Monthly.rows,
       gadsCampaigns: gadsCampaigns.rows,
+      donationsByCategory: donationsByCategory.rows,
+      donationsMonthly: donationsMonthly.rows,
+      donationsMonthlyByCategory: donationsMonthlyByCategory.rows,
       mailchimpCampaigns: mailchimpCampaigns.rows,
       dateRange: { start: dateFrom, end: dateTo },
     });

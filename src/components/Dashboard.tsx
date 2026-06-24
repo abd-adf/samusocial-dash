@@ -7,13 +7,17 @@ import StatsCards from "./StatsCards";
 import MonthlyChart from "./MonthlyChart";
 import SpendChart from "./SpendChart";
 import CampaignTable from "./CampaignTable";
+import DonationsPanel from "./DonationsPanel";
 import MailchimpTable from "./MailchimpTable";
 
-interface DashboardData {
+export interface DashboardData {
   fbMonthly: QueryRow[];
   fbCampaigns: QueryRow[];
   ga4Monthly: QueryRow[];
   gadsCampaigns: QueryRow[];
+  donationsByCategory: QueryRow[];
+  donationsMonthly: QueryRow[];
+  donationsMonthlyByCategory: QueryRow[];
   mailchimpCampaigns: QueryRow[];
   dateRange: { start: string; end: string };
 }
@@ -79,7 +83,6 @@ export default function Dashboard({ initialData }: DashboardProps) {
         />
       </div>
 
-      {/* Loading overlay */}
       <div className={loading ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
         {/* KPI Cards */}
         <StatsCards
@@ -87,6 +90,18 @@ export default function Dashboard({ initialData }: DashboardProps) {
           ga4Data={data.ga4Monthly}
           gadsData={data.gadsCampaigns}
         />
+
+        {/* Donations section */}
+        <div className="mt-6">
+          <h2 className="text-lg font-bold text-foreground mb-3">
+            Donations — E-commerce GA4
+          </h2>
+          <DonationsPanel
+            byCategory={data.donationsByCategory}
+            monthlyTotals={data.donationsMonthly}
+            monthlyByCategory={data.donationsMonthlyByCategory}
+          />
+        </div>
 
         {/* Charts row */}
         <div className="grid lg:grid-cols-5 gap-6 mt-6">
