@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Heart, Megaphone, LayoutList } from "lucide-react";
+import { Heart, Megaphone, LayoutList, Mail } from "lucide-react";
 import type { QueryRow } from "@/lib/api";
 import DatePicker from "./DatePicker";
 import SectionHeader from "./SectionHeader";
@@ -167,11 +167,20 @@ export default function Dashboard({ initialData }: DashboardProps) {
               ]}
             />
 
-            {/* Mailchimp campaigns */}
-            <div>
-              <MailchimpTable campaigns={data.mailchimpCampaigns} />
-            </div>
           </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 4 — PERFORMANCE EMAILING
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader
+            title="Performance Emailing"
+            subtitle="Campagnes Mailchimp — New Samusocial asbl"
+            icon={Mail}
+            color="#FFE01B"
+          />
+          <MailchimpTable campaigns={data.mailchimpCampaigns} />
         </section>
       </div>
     </div>

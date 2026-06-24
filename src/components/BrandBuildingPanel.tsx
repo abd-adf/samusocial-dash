@@ -121,55 +121,6 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
         ))}
       </div>
 
-      {/* Platform breakdown */}
-      <div className="grid lg:grid-cols-2 gap-4">
-        {/* Meta Brand */}
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Image src="/logos/meta.png" alt="Meta" width={80} height={24} className="h-5 w-auto" />
-            <span className="text-xs text-text-muted">Brand Metrics</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: "Impressions", value: formatNumber(metaImpressions) },
-              { label: "Reach", value: formatNumber(metaReach) },
-              { label: "Fréquence", value: metaFrequency.toFixed(2) },
-              { label: "CTR", value: formatPercent(metaCTR) },
-            ].map((m) => (
-              <div key={m.label} className="bg-background rounded-lg p-3">
-                <p className="text-[10px] uppercase tracking-wide text-text-muted">{m.label}</p>
-                <p className="text-lg font-bold text-foreground">{m.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Google Brand */}
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Image src="/logos/google-ads.png" alt="Google Ads" width={100} height={28} className="h-6 w-auto bg-white rounded px-1" />
-            <span className="text-xs text-text-muted">Brand Metrics</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {gadsData.map((row) => (
-              <div key={String(row["campaign.name"])} className="bg-background rounded-lg p-3">
-                <p className="text-[10px] uppercase tracking-wide text-text-muted truncate">
-                  {String(row["campaign.name"])}
-                </p>
-                <p className="text-lg font-bold text-foreground">
-                  {formatNumber(Number(row["metrics.impressions"]))}
-                </p>
-                <p className="text-[10px] text-text-muted">
-                  CTR {formatPercent(Number(row["metrics.ctr"]))}
-                  {Number(row["metrics.top_impression_percentage"]) > 0 &&
-                    ` · Top ${formatPercent(Number(row["metrics.top_impression_percentage"]))}`}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Reach vs Impressions per campaign table */}
       {metaCampaigns.length > 0 && (
         <div className="bg-surface rounded-xl border border-border overflow-hidden">
