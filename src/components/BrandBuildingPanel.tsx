@@ -177,7 +177,7 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
             <Image src="/logos/meta.png" alt="Meta" width={80} height={24} className="h-5 w-auto" />
             <div>
               <h3 className="text-sm font-semibold text-foreground">Reach & Fréquence par campagne</h3>
-              <p className="text-xs text-text-muted">Byron Sharp : disponibilité mentale = portée × fréquence</p>
+              <p className="text-xs text-text-muted">Byron Sharp : maximiser la portée avec une fréquence suffisante</p>
             </div>
           </div>
           <div className="overflow-x-auto">
