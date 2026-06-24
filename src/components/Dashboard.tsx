@@ -9,6 +9,7 @@ import DonationsPanel from "./DonationsPanel";
 import BrandBuildingPanel from "./BrandBuildingPanel";
 import CampaignTable from "./CampaignTable";
 import MailchimpTable from "./MailchimpTable";
+import ChatWidget from "./ChatWidget";
 
 export interface DashboardData {
   fbMonthly: QueryRow[];
@@ -183,6 +184,8 @@ export default function Dashboard({ initialData }: DashboardProps) {
           <MailchimpTable campaigns={data.mailchimpCampaigns} />
         </section>
       </div>
+
+      <ChatWidget dateRange={data.dateRange} />
     </div>
   );
 }
