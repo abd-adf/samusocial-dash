@@ -3,7 +3,6 @@
 import { Eye, Users, Radio, MousePointer, Repeat, BarChart3 } from "lucide-react";
 import type { QueryRow } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/format";
-import Image from "next/image";
 
 interface BrandBuildingPanelProps {
   fbData: QueryRow[];
@@ -87,20 +86,6 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
     },
   ];
 
-  // Per-campaign Meta data for table
-  const metaCampaigns = fbData.map((r) => {
-    const impressions = Number(r.impressions) || 0;
-    const reach = Number(r.reach) || 0;
-    const clicks = Number(r.clicks) || 0;
-    return {
-      name: String(r.campaign_name),
-      impressions,
-      reach,
-      frequency: reach > 0 ? impressions / reach : 0,
-      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
-    };
-  });
-
   return (
     <div className="space-y-4">
       {/* KPIs */}
@@ -120,43 +105,6 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
           </div>
         ))}
       </div>
-
-      {/* Reach vs Impressions per campaign table */}
-      {metaCampaigns.length > 0 && (
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
-          <div className="px-5 py-4 border-b border-border flex items-center gap-3">
-            <Image src="/logos/meta.png" alt="Meta" width={80} height={24} className="h-5 w-auto" />
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">Reach & Fréquence par campagne</h3>
-              <p className="text-xs text-text-muted">Byron Sharp : maximiser la portée avec une fréquence suffisante</p>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-background/50">
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wide">Campagne</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Impressions</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Reach</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Fréquence</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">CTR</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {metaCampaigns.map((c) => (
-                  <tr key={c.name} className="hover:bg-surface-hover transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground max-w-[300px] truncate">{c.name}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatNumber(c.impressions)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatNumber(c.reach)}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{c.frequency.toFixed(1)}×</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatPercent(c.ctr)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
