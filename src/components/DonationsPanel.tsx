@@ -64,11 +64,14 @@ export default function DonationsPanel({
         (r) => String(r.month) === month && r.itemCategory === "regular"
       );
       const totalRow = monthlyTotals.find((r) => String(r.month) === month);
+      const onceCount = Number(onceRow?.itemsPurchased) || 0;
+      const regCount = Number(regularRow?.itemsPurchased) || 0;
       return {
         month: monthNames[month] || month,
         "Dons uniques (€)": Math.round(Number(onceRow?.itemRevenue) || 0),
         "Dons réguliers (€)": Math.round(Number(regularRow?.itemRevenue) || 0),
         "Don moyen (€)": Math.round(Number(totalRow?.averagePurchaseRevenue) || 0),
+        "Nombre de dons": onceCount + regCount,
       };
     });
 
@@ -149,17 +152,22 @@ export default function DonationsPanel({
           <p className="text-xs text-text-muted mb-4">
             Dons uniques vs réguliers — source GA4 e-commerce
           </p>
-          <div className="h-72">
+          <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ea" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} />
-                <YAxis yAxisId="revenue" tick={{ fontSize: 11, fill: "#6b7280" }} />
                 <YAxis
-                  yAxisId="avg"
+                  yAxisId="revenue"
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  label={{ value: "Revenu (€)", angle: -90, position: "insideLeft", style: { fontSize: 10, fill: "#9ca3af" } }}
+                />
+                <YAxis
+                  yAxisId="right"
                   orientation="right"
                   tick={{ fontSize: 11, fill: "#6b7280" }}
                   domain={[0, "auto"]}
+                  label={{ value: "Dons / Don moy.", angle: 90, position: "insideRight", style: { fontSize: 10, fill: "#9ca3af" } }}
                 />
                 <Tooltip
                   contentStyle={{
@@ -168,17 +176,23 @@ export default function DonationsPanel({
                     borderRadius: "8px",
                     fontSize: "13px",
                   }}
-                  formatter={(value) =>
-                    new Intl.NumberFormat("fr-BE", {
-                      style: "currency",
-                      currency: "EUR",
-                      maximumFractionDigits: 0,
-                    }).format(Number(value))
-                  }
+                  formatter={(value, name) => {
+                    const n = Number(value);
+                    if (String(name) === "Nombre de dons") {
+                      return [new Intl.NumberFormat("fr-BE").format(n), name];
+                    }
+                    return [
+                      new Intl.NumberFormat("fr-BE", {
+                        style: "currency",
+                        currency: "EUR",
+                        maximumFractionDigits: 0,
+                      }).format(n),
+                      name,
+                    ];
+                  }}
                 />
                 <Legend
                   verticalAlign="top"
-                  iconType="circle"
                   iconSize={8}
                   wrapperStyle={{ fontSize: "11px", paddingBottom: "8px" }}
                 />
@@ -197,12 +211,21 @@ export default function DonationsPanel({
                   stackId="stack"
                 />
                 <Line
-                  yAxisId="avg"
+                  yAxisId="right"
                   type="monotone"
                   dataKey="Don moyen (€)"
                   stroke="#10b981"
                   strokeWidth={2.5}
                   dot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="Nombre de dons"
+                  stroke="#21365e"
+                  strokeWidth={2.5}
+                  strokeDasharray="6 3"
+                  dot={{ r: 5, fill: "#21365e", strokeWidth: 2, stroke: "#fff" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
