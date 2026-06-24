@@ -154,7 +154,7 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
         {/* Google Brand */}
         <div className="bg-surface rounded-xl border border-border p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Image src="/logos/google-ads.png" alt="Google Ads" width={100} height={28} className="h-6 w-auto" />
+            <Image src="/logos/google-ads.png" alt="Google Ads" width={100} height={28} className="h-6 w-auto bg-white rounded px-1" />
             <span className="text-xs text-text-muted">Brand Metrics</span>
           </div>
           <div className="grid grid-cols-2 gap-3">

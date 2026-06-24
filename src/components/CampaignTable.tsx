@@ -36,7 +36,7 @@ export default function CampaignTable({ title, platform, logo, color, rows, colu
     <div className="bg-surface rounded-xl border border-border overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center gap-3">
         {logo ? (
-          <Image src={logo} alt={title} width={80} height={24} className="h-6 w-auto" />
+          <Image src={logo} alt={title} width={80} height={24} className="h-6 w-auto bg-white rounded px-1" />
         ) : (
           <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
         )}
