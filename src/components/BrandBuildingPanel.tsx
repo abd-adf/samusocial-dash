@@ -1,16 +1,6 @@
 "use client";
 
 import { Eye, Users, Radio, MousePointer, Repeat, BarChart3 } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  Legend,
-} from "recharts";
 import type { QueryRow } from "@/lib/api";
 import { formatNumber, formatPercent } from "@/lib/format";
 import Image from "next/image";
@@ -97,16 +87,19 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
     },
   ];
 
-  // Chart: impressions by platform by campaign
-  const chartData = [
-    ...fbData.map((r) => ({
-      name: String(r.campaign_name).length > 20
-        ? String(r.campaign_name).slice(0, 18) + "..."
-        : String(r.campaign_name),
-      "Meta — Impressions": Number(r.impressions) || 0,
-      "Meta — Reach": Number(r.reach) || 0,
-    })),
-  ];
+  // Per-campaign Meta data for table
+  const metaCampaigns = fbData.map((r) => {
+    const impressions = Number(r.impressions) || 0;
+    const reach = Number(r.reach) || 0;
+    const clicks = Number(r.clicks) || 0;
+    return {
+      name: String(r.campaign_name),
+      impressions,
+      reach,
+      frequency: reach > 0 ? impressions / reach : 0,
+      ctr: impressions > 0 ? (clicks / impressions) * 100 : 0,
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -177,30 +170,39 @@ export default function BrandBuildingPanel({ fbData, gadsData, ga4Data }: BrandB
         </div>
       </div>
 
-      {/* Reach vs Impressions chart */}
-      {chartData.length > 0 && (
-        <div className="bg-surface rounded-xl border border-border p-6">
-          <h3 className="text-sm font-semibold text-foreground mb-1">
-            Reach vs Impressions par campagne Meta
-          </h3>
-          <p className="text-xs text-text-muted mb-4">
-            Byron Sharp : la disponibilité mentale dépend de la portée et de la fréquence d&apos;exposition
-          </p>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ea" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#6b7280" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} />
-                <Tooltip
-                  contentStyle={{ background: "#fff", border: "1px solid #e2e6ea", borderRadius: "8px", fontSize: "13px" }}
-                  formatter={(value) => new Intl.NumberFormat("fr-BE").format(Number(value))}
-                />
-                <Legend verticalAlign="top" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: "11px", paddingBottom: "8px" }} />
-                <Bar dataKey="Meta — Reach" fill="#1877F2" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Meta — Impressions" fill="#1877F2" fillOpacity={0.4} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      {/* Reach vs Impressions per campaign table */}
+      {metaCampaigns.length > 0 && (
+        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+          <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+            <Image src="/logos/meta.png" alt="Meta" width={80} height={24} className="h-5 w-auto" />
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Reach & Fréquence par campagne</h3>
+              <p className="text-xs text-text-muted">Byron Sharp : disponibilité mentale = portée × fréquence</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-background/50">
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold text-text-muted uppercase tracking-wide">Campagne</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Impressions</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Reach</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">Fréquence</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold text-text-muted uppercase tracking-wide">CTR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {metaCampaigns.map((c) => (
+                  <tr key={c.name} className="hover:bg-surface-hover transition-colors">
+                    <td className="px-4 py-3 font-medium text-foreground max-w-[300px] truncate">{c.name}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatNumber(c.impressions)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatNumber(c.reach)}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{c.frequency.toFixed(1)}×</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-text-muted">{formatPercent(c.ctr)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
