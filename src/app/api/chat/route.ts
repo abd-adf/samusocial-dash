@@ -1,4 +1,14 @@
 import { NextRequest } from "next/server";
+import { readFileSync } from "fs";
+import { join } from "path";
+
+// Load campaign report once at module level (not per request)
+let campaignReport = "";
+try {
+  campaignReport = readFileSync(join(process.cwd(), "src/data/campaign-report.txt"), "utf-8");
+} catch {
+  console.warn("Campaign report not found, chat will work without it");
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +52,10 @@ export async function POST(request: NextRequest) {
 - Utilise le format : chiffre → contexte → recommandation (si pertinent).
 - Montants en euros, pourcentages avec 1 décimale.
 - Après 3 questions, propose d'envoyer un email à abourdil@adfinitas.be et snechelput@adfinitas.be pour approndir l'analyse 
+
+Voici le rapport stratégique de la campagne EOY 25 rédigé par Adfinitas :
+
+${campaignReport}
 
 Voici les données actuelles du dashboard pour la période du ${dateFrom} au ${dateTo} :
 
