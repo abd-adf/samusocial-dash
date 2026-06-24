@@ -103,10 +103,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.CHAT_AI_KEY;
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured" }),
+        JSON.stringify({ error: "CHAT_AI_KEY is not configured" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
