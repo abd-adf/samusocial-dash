@@ -6,6 +6,31 @@ import {
   queryMailchimp,
 } from "@/lib/api";
 
+const FB_CAMPAIGN_FIELDS = [
+  "campaign_name", "spend", "impressions", "clicks", "ctr", "cpc",
+  "reach", "frequency",
+  "actions:link_click", "cost_per_action_type:link_click",
+  "actions:landing_page_view",
+  "actions:omni_purchase", "action_values:omni_purchase",
+  "cost_per_action_type:omni_purchase", "purchase_roas:omni_purchase",
+];
+
+const FB_MONTHLY_FIELDS = [
+  "month", "spend", "impressions", "clicks", "ctr", "cpc",
+  "reach", "frequency",
+  "actions:link_click", "cost_per_action_type:link_click",
+  "actions:landing_page_view",
+  "actions:omni_purchase", "action_values:omni_purchase",
+];
+
+const GADS_FIELDS = [
+  "campaign.name", "metrics.cost_micros", "metrics.impressions",
+  "metrics.clicks", "metrics.ctr", "metrics.average_cpc",
+  "metrics.conversions", "metrics.conversions_value",
+  "metrics.absolute_top_impression_percentage",
+  "metrics.top_impression_percentage",
+];
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const dateFrom = searchParams.get("from") || "2025-11-01";
@@ -14,50 +39,26 @@ export async function GET(request: NextRequest) {
   try {
     // Batch 1: Facebook Ads
     const [fbMonthly, fbCampaigns] = await Promise.all([
-      queryFacebookAds(
-        dateFrom, dateTo,
-        ["month", "spend", "impressions", "clicks", "ctr", "cpc", "actions:link_click", "cost_per_action_type:link_click", "actions:landing_page_view"],
-        ["month"],
-      ),
-      queryFacebookAds(
-        dateFrom, dateTo,
-        ["campaign_name", "spend", "impressions", "clicks", "ctr", "cpc", "actions:link_click", "cost_per_action_type:link_click", "actions:landing_page_view"],
-        ["campaign_name"],
-      ),
+      queryFacebookAds(dateFrom, dateTo, FB_MONTHLY_FIELDS, ["month"]),
+      queryFacebookAds(dateFrom, dateTo, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
     ]);
 
-    // Batch 2: GA4 + Google Ads
+    // Batch 2: GA4 traffic + Google Ads
     const [ga4Monthly, gadsCampaigns] = await Promise.all([
       queryGA4(
         dateFrom, dateTo,
         ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"],
         ["month"],
       ),
-      queryGoogleAds(
-        dateFrom, dateTo,
-        ["campaign.name", "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.ctr", "metrics.average_cpc", "metrics.conversions", "metrics.conversions_value"],
-        ["campaign.name"],
-      ),
+      queryGoogleAds(dateFrom, dateTo, GADS_FIELDS, ["campaign.name"]),
     ]);
 
     // Batch 3: Donations + Mailchimp
     const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
       await Promise.all([
-        queryGA4(
-          dateFrom, dateTo,
-          ["itemCategory", "itemRevenue", "itemsPurchased"],
-          ["itemCategory"],
-        ),
-        queryGA4(
-          dateFrom, dateTo,
-          ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"],
-          ["month"],
-        ),
-        queryGA4(
-          dateFrom, dateTo,
-          ["month", "itemCategory", "itemRevenue", "itemsPurchased"],
-          ["month", "itemCategory"],
-        ),
+        queryGA4(dateFrom, dateTo, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
+        queryGA4(dateFrom, dateTo, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
+        queryGA4(dateFrom, dateTo, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
         queryMailchimp(
           dateFrom, dateTo,
           ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"],
@@ -78,9 +79,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error("API fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch data" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
   }
 }

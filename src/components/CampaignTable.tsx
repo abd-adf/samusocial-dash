@@ -1,11 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import type { QueryRow } from "@/lib/api";
 import { formatCurrency, formatNumber, formatPercent } from "@/lib/format";
 
 interface CampaignTableProps {
   title: string;
   platform: string;
+  logo?: string;
   color: string;
   rows: QueryRow[];
   columns: {
@@ -15,7 +17,7 @@ interface CampaignTableProps {
   }[];
 }
 
-export default function CampaignTable({ title, platform, color, rows, columns }: CampaignTableProps) {
+export default function CampaignTable({ title, platform, logo, color, rows, columns }: CampaignTableProps) {
   const formatValue = (value: unknown, format: string) => {
     const num = Number(value);
     switch (format) {
@@ -32,11 +34,12 @@ export default function CampaignTable({ title, platform, color, rows, columns }:
 
   return (
     <div className="bg-surface rounded-xl border border-border overflow-hidden">
-      <div className="px-5 py-4 border-b border-border flex items-center gap-2">
-        <div
-          className="w-2.5 h-2.5 rounded-full"
-          style={{ backgroundColor: color }}
-        />
+      <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+        {logo ? (
+          <Image src={logo} alt={title} width={80} height={24} className="h-6 w-auto" />
+        ) : (
+          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
+        )}
         <div>
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
           <p className="text-xs text-text-muted">{platform}</p>
@@ -75,10 +78,7 @@ export default function CampaignTable({ title, platform, color, rows, columns }:
             ))}
             {rows.length === 0 && (
               <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-4 py-8 text-center text-text-muted"
-                >
+                <td colSpan={columns.length} className="px-4 py-8 text-center text-text-muted">
                   Aucune donnée disponible
                 </td>
               </tr>

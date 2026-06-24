@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Heart, Megaphone, LayoutList } from "lucide-react";
 import type { QueryRow } from "@/lib/api";
 import DatePicker from "./DatePicker";
-import StatsCards from "./StatsCards";
-import MonthlyChart from "./MonthlyChart";
-import SpendChart from "./SpendChart";
-import CampaignTable from "./CampaignTable";
+import SectionHeader from "./SectionHeader";
 import DonationsPanel from "./DonationsPanel";
+import BrandBuildingPanel from "./BrandBuildingPanel";
+import CampaignTable from "./CampaignTable";
 import MailchimpTable from "./MailchimpTable";
 
 export interface DashboardData {
@@ -63,13 +63,10 @@ export default function Dashboard({ initialData }: DashboardProps) {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
       {/* Header + Date Picker */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground">
-            Samusocial Brussels — Reporting
-          </h2>
           <p className="text-xs text-text-muted">
             Période : {data.dateRange.start} au {data.dateRange.end} · Mis à jour le{" "}
             {lastUpdated}
@@ -83,76 +80,99 @@ export default function Dashboard({ initialData }: DashboardProps) {
         />
       </div>
 
-      <div className={loading ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
-        {/* KPI Cards */}
-        <StatsCards
-          fbData={data.fbMonthly}
-          ga4Data={data.ga4Monthly}
-          gadsData={data.gadsCampaigns}
-        />
+      <div className={loading ? "opacity-50 pointer-events-none transition-opacity space-y-10" : "transition-opacity space-y-10"}>
 
-        {/* Donations section */}
-        <div className="mt-6">
-          <h2 className="text-lg font-bold text-foreground mb-3">
-            Donations — E-commerce GA4
-          </h2>
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 1 — PERFORMANCE FUNDRAISING
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader
+            title="Performance Fundraising"
+            subtitle="Dons en ligne — données e-commerce GA4"
+            icon={Heart}
+            color="#10b981"
+          />
           <DonationsPanel
             byCategory={data.donationsByCategory}
             monthlyTotals={data.donationsMonthly}
             monthlyByCategory={data.donationsMonthlyByCategory}
           />
-        </div>
+        </section>
 
-        {/* Charts row */}
-        <div className="grid lg:grid-cols-5 gap-6 mt-6">
-          <div className="lg:col-span-3">
-            <MonthlyChart fbMonthly={data.fbMonthly} ga4Monthly={data.ga4Monthly} />
-          </div>
-          <div className="lg:col-span-2">
-            <SpendChart fbData={data.fbMonthly} gadsData={data.gadsCampaigns} />
-          </div>
-        </div>
-
-        {/* Campaign tables */}
-        <div className="grid lg:grid-cols-2 gap-6 mt-6">
-          <CampaignTable
-            title="Campagnes Meta Ads"
-            platform="Facebook & Instagram"
-            color="#1877F2"
-            rows={data.fbCampaigns}
-            columns={[
-              { key: "campaign_name", label: "Campagne", format: "text" },
-              { key: "spend", label: "Dépenses", format: "currency" },
-              { key: "impressions", label: "Impr.", format: "number" },
-              { key: "actions:link_click", label: "Link clicks", format: "number" },
-              { key: "actions:landing_page_view", label: "LP Views", format: "number" },
-              { key: "ctr", label: "CTR", format: "percent" },
-              { key: "cost_per_action_type:link_click", label: "CPC (link)", format: "currency" },
-            ]}
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 2 — PERFORMANCE BRAND BUILDING
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader
+            title="Performance Brand Building"
+            subtitle="Portée, fréquence & disponibilité mentale — framework Byron Sharp"
+            icon={Megaphone}
+            color="#8b5cf6"
           />
-          <CampaignTable
-            title="Campagnes Google Ads"
-            platform="Search & Performance Max"
-            color="#4285F4"
-            rows={data.gadsCampaigns}
-            columns={[
-              { key: "campaign.name", label: "Campagne", format: "text" },
-              { key: "metrics.cost_micros", label: "Dépenses", format: "currency" },
-              { key: "metrics.impressions", label: "Impr.", format: "number" },
-              { key: "metrics.clicks", label: "Clics", format: "number" },
-              { key: "metrics.ctr", label: "CTR", format: "percent" },
-              { key: "metrics.conversions", label: "Conv.", format: "number" },
-            ]}
+          <BrandBuildingPanel
+            fbData={data.fbCampaigns}
+            gadsData={data.gadsCampaigns}
+            ga4Data={data.ga4Monthly}
           />
-        </div>
+        </section>
 
-        {/* Mailchimp section */}
-        <div className="mt-6">
-          <h2 className="text-lg font-bold text-foreground mb-3">
-            Performance Email — Mailchimp
-          </h2>
-          <MailchimpTable campaigns={data.mailchimpCampaigns} />
-        </div>
+        {/* ═══════════════════════════════════════════════════════════════════
+            SECTION 3 — DÉTAIL PAR CAMPAGNE
+        ═══════════════════════════════════════════════════════════════════ */}
+        <section>
+          <SectionHeader
+            title="Détail par campagne"
+            subtitle="Performance détaillée par plateforme publicitaire et emailing"
+            icon={LayoutList}
+            color="#21365e"
+          />
+
+          <div className="space-y-6">
+            {/* Meta Ads campaigns */}
+            <CampaignTable
+              title="Campagnes Meta Ads"
+              platform="Facebook & Instagram"
+              logo="/logos/meta.png"
+              color="#1877F2"
+              rows={data.fbCampaigns}
+              columns={[
+                { key: "campaign_name", label: "Campagne", format: "text" },
+                { key: "spend", label: "Dépenses", format: "currency" },
+                { key: "impressions", label: "Impressions", format: "number" },
+                { key: "reach", label: "Reach", format: "number" },
+                { key: "clicks", label: "Clics", format: "number" },
+                { key: "actions:landing_page_view", label: "LP Views", format: "number" },
+                { key: "ctr", label: "CTR", format: "percent" },
+                { key: "cpc", label: "CPC", format: "currency" },
+                { key: "actions:omni_purchase", label: "Purchases", format: "number" },
+                { key: "action_values:omni_purchase", label: "Revenue", format: "currency" },
+              ]}
+            />
+
+            {/* Google Ads campaigns */}
+            <CampaignTable
+              title="Campagnes Google Ads"
+              platform="Search & Performance Max"
+              logo="/logos/google-ads.png"
+              color="#4285F4"
+              rows={data.gadsCampaigns}
+              columns={[
+                { key: "campaign.name", label: "Campagne", format: "text" },
+                { key: "metrics.cost_micros", label: "Dépenses", format: "currency" },
+                { key: "metrics.impressions", label: "Impressions", format: "number" },
+                { key: "metrics.clicks", label: "Clics", format: "number" },
+                { key: "metrics.ctr", label: "CTR", format: "percent" },
+                { key: "metrics.conversions", label: "Conversions", format: "number" },
+                { key: "metrics.top_impression_percentage", label: "Top Impr. %", format: "percent" },
+              ]}
+            />
+
+            {/* Mailchimp campaigns */}
+            <div>
+              <MailchimpTable campaigns={data.mailchimpCampaigns} />
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

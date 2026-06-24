@@ -8,34 +8,49 @@ export const revalidate = 300;
 const DATE_FROM = "2025-11-01";
 const DATE_TO = "2025-12-31";
 
-const FB_FIELDS = [
-  "spend", "impressions", "clicks", "ctr", "cpc",
+const FB_CAMPAIGN_FIELDS = [
+  "campaign_name", "spend", "impressions", "clicks", "ctr", "cpc",
+  "reach", "frequency",
   "actions:link_click", "cost_per_action_type:link_click",
   "actions:landing_page_view",
+  "actions:omni_purchase", "action_values:omni_purchase",
+  "cost_per_action_type:omni_purchase", "purchase_roas:omni_purchase",
+];
+
+const FB_MONTHLY_FIELDS = [
+  "month", "spend", "impressions", "clicks", "ctr", "cpc",
+  "reach", "frequency",
+  "actions:link_click", "cost_per_action_type:link_click",
+  "actions:landing_page_view",
+  "actions:omni_purchase", "action_values:omni_purchase",
+];
+
+const GADS_FIELDS = [
+  "campaign.name", "metrics.cost_micros", "metrics.impressions",
+  "metrics.clicks", "metrics.ctr", "metrics.average_cpc",
+  "metrics.conversions", "metrics.conversions_value",
+  "metrics.absolute_top_impression_percentage",
+  "metrics.top_impression_percentage",
 ];
 
 export default async function Home() {
   // Batch 1: Facebook Ads
   const [fbMonthly, fbCampaigns] = await Promise.all([
-    queryFacebookAds(DATE_FROM, DATE_TO, ["month", ...FB_FIELDS], ["month"]),
-    queryFacebookAds(DATE_FROM, DATE_TO, ["campaign_name", ...FB_FIELDS], ["campaign_name"]),
+    queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
+    queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
   ]);
 
-  // Batch 2: GA4 traffic + Google Ads
+  // Batch 2: GA4 + Google Ads
   const [ga4Monthly, gadsCampaigns] = await Promise.all([
     queryGA4(
       DATE_FROM, DATE_TO,
       ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"],
       ["month"],
     ),
-    queryGoogleAds(
-      DATE_FROM, DATE_TO,
-      ["campaign.name", "metrics.cost_micros", "metrics.impressions", "metrics.clicks", "metrics.ctr", "metrics.average_cpc", "metrics.conversions", "metrics.conversions_value"],
-      ["campaign.name"],
-    ),
+    queryGoogleAds(DATE_FROM, DATE_TO, GADS_FIELDS, ["campaign.name"]),
   ]);
 
-  // Batch 3: Donations (GA4 e-commerce) + Mailchimp
+  // Batch 3: Donations + Mailchimp
   const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
     await Promise.all([
       queryGA4(DATE_FROM, DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
