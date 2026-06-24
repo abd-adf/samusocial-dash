@@ -3,6 +3,7 @@
 import { Heart, TrendingUp, Repeat, Banknote } from "lucide-react";
 import {
   ComposedChart,
+  BarChart,
   Bar,
   Line,
   XAxis,
@@ -11,6 +12,7 @@ import {
   ResponsiveContainer,
   CartesianGrid,
   Legend,
+  Cell,
 } from "recharts";
 import type { QueryRow } from "@/lib/api";
 import { formatCurrency, formatNumber } from "@/lib/format";
@@ -19,12 +21,14 @@ interface DonationsPanelProps {
   byCategory: QueryRow[];
   monthlyTotals: QueryRow[];
   monthlyByCategory: QueryRow[];
+  byChannel: QueryRow[];
 }
 
 export default function DonationsPanel({
   byCategory,
   monthlyTotals,
   monthlyByCategory,
+  byChannel,
 }: DonationsPanelProps) {
   const once = byCategory.find((r) => r.itemCategory === "once");
   const regular = byCategory.find((r) => r.itemCategory === "regular");
@@ -73,6 +77,53 @@ export default function DonationsPanel({
         "Nombre de dons": onceCount + regCount,
       };
     });
+
+  // Channel attribution — group source/medium into meaningful channels
+  const channelConfig: Record<string, { label: string; color: string }> = {
+    "Meta Ads": { label: "Meta Ads", color: "#1877F2" },
+    "Google Ads": { label: "Google Ads", color: "#4285F4" },
+    "Email": { label: "Email", color: "#8b5cf6" },
+    "Organic / Popup": { label: "Organic / Popup", color: "#6b7280" },
+    "Direct": { label: "Direct", color: "#21365e" },
+    "Referral": { label: "Referral", color: "#f04f26" },
+    "Organic Search": { label: "Organic Search", color: "#10b981" },
+    "Organic Social": { label: "Organic Social", color: "#E37400" },
+    "Autre": { label: "Autre", color: "#94a3b8" },
+  };
+
+  function classifyChannel(source: string, medium: string): string {
+    const s = source.toLowerCase();
+    const m = medium.toLowerCase();
+    if (s === "meta" && m === "ads") return "Meta Ads";
+    if ((s === "paid" || s === "ads") && m === "google") return "Google Ads";
+    if (m === "email") return "Email";
+    if (s === "organic" && m === "popup") return "Organic / Popup";
+    if (s === "(not set)" && m === "(not set)") return "Direct";
+    if (m === "referral") return "Referral";
+    if (m === "organic") return "Organic Search";
+    if (m === "social" || s === "l.instagram.com" || s === "l.facebook.com") return "Organic Social";
+    if (s === "paid" && m === "lp") return "Google Ads";
+    return "Autre";
+  }
+
+  const channelAgg: Record<string, { revenue: number; transactions: number }> = {};
+  byChannel.forEach((r) => {
+    const tx = Number(r.transactions) || 0;
+    if (tx === 0) return;
+    const ch = classifyChannel(String(r.sessionManualSource || ""), String(r.sessionManualMedium || ""));
+    if (!channelAgg[ch]) channelAgg[ch] = { revenue: 0, transactions: 0 };
+    channelAgg[ch].revenue += Number(r.purchaseRevenue) || 0;
+    channelAgg[ch].transactions += tx;
+  });
+
+  const channelData = Object.entries(channelAgg)
+    .map(([ch, data]) => ({
+      channel: channelConfig[ch]?.label || ch,
+      revenue: Math.round(data.revenue),
+      transactions: data.transactions,
+      color: channelConfig[ch]?.color || "#94a3b8",
+    }))
+    .sort((a, b) => b.revenue - a.revenue);
 
   const kpis = [
     {
@@ -220,6 +271,110 @@ export default function DonationsPanel({
                 />
               </ComposedChart>
             </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Attribution by channel */}
+      {channelData.length > 0 && (
+        <div className="bg-surface rounded-xl border border-border p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-1">
+            Revenus par canal d&apos;acquisition
+          </h3>
+          <p className="text-xs text-text-muted mb-4">
+            Attribution GA4 par sessionDefaultChannelGroup
+          </p>
+          <div className="grid lg:grid-cols-[1fr_280px] gap-6">
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={channelData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ea" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: "#6b7280" }}
+                    tickFormatter={(v) =>
+                      new Intl.NumberFormat("fr-BE", {
+                        style: "currency",
+                        currency: "EUR",
+                        maximumFractionDigits: 0,
+                      }).format(v)
+                    }
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="channel"
+                    width={110}
+                    tick={{ fontSize: 11, fill: "#6b7280" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#fff",
+                      border: "1px solid #e2e6ea",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                    }}
+                    formatter={(value, name) => {
+                      const n = Number(value);
+                      if (String(name) === "transactions") {
+                        return [new Intl.NumberFormat("fr-BE").format(n), "Transactions"];
+                      }
+                      return [
+                        new Intl.NumberFormat("fr-BE", {
+                          style: "currency",
+                          currency: "EUR",
+                          maximumFractionDigits: 0,
+                        }).format(n),
+                        "Revenu",
+                      ];
+                    }}
+                  />
+                  <Bar dataKey="revenue" radius={[0, 4, 4, 0]} name="revenue">
+                    {channelData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Channel table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left text-[10px] uppercase tracking-wide text-text-muted pb-2">Canal</th>
+                    <th className="text-right text-[10px] uppercase tracking-wide text-text-muted pb-2">Revenu</th>
+                    <th className="text-right text-[10px] uppercase tracking-wide text-text-muted pb-2">Tx</th>
+                    <th className="text-right text-[10px] uppercase tracking-wide text-text-muted pb-2">%</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {channelData.map((row) => {
+                    const pct = totalRevenue > 0 ? (row.revenue / totalRevenue) * 100 : 0;
+                    return (
+                      <tr key={row.channel}>
+                        <td className="py-1.5 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: row.color }} />
+                          <span className="text-foreground text-xs">{row.channel}</span>
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums text-xs text-text-muted">
+                          {formatCurrency(row.revenue)}
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums text-xs text-text-muted">
+                          {formatNumber(row.transactions)}
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums text-xs text-text-muted">
+                          {pct.toFixed(1)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

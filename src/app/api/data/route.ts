@@ -54,11 +54,12 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Batch 3: Donations + Mailchimp
-    const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
+    const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
       await Promise.all([
         queryGA4(dateFrom, dateTo, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
         queryGA4(dateFrom, dateTo, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
         queryGA4(dateFrom, dateTo, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
+        queryGA4(dateFrom, dateTo, ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName", "transactions", "purchaseRevenue"], ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName"]),
         queryMailchimp(
           dateFrom, dateTo,
           ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"],
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
       donationsByCategory: donationsByCategory.rows,
       donationsMonthly: donationsMonthly.rows,
       donationsMonthlyByCategory: donationsMonthlyByCategory.rows,
+      donationsByChannel: donationsByChannel.rows,
       mailchimpCampaigns: mailchimpCampaigns.rows,
       dateRange: { start: dateFrom, end: dateTo },
     });

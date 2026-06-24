@@ -18,6 +18,7 @@ export interface DashboardData {
   donationsByCategory: QueryRow[];
   donationsMonthly: QueryRow[];
   donationsMonthlyByCategory: QueryRow[];
+  donationsByChannel: QueryRow[];
   mailchimpCampaigns: QueryRow[];
   dateRange: { start: string; end: string };
 }
@@ -96,6 +97,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
             byCategory={data.donationsByCategory}
             monthlyTotals={data.donationsMonthly}
             monthlyByCategory={data.donationsMonthlyByCategory}
+            byChannel={data.donationsByChannel}
           />
         </section>
 
@@ -144,8 +146,6 @@ export default function Dashboard({ initialData }: DashboardProps) {
                 { key: "actions:landing_page_view", label: "LP Views", format: "number" },
                 { key: "ctr", label: "CTR", format: "percent" },
                 { key: "cpc", label: "CPC", format: "currency" },
-                { key: "actions:omni_purchase", label: "Purchases", format: "number" },
-                { key: "action_values:omni_purchase", label: "Revenue", format: "currency" },
               ]}
             />
 
