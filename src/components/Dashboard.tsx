@@ -1,92 +1,143 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import type { QueryRow } from "@/lib/api";
+import DatePicker from "./DatePicker";
 import StatsCards from "./StatsCards";
 import MonthlyChart from "./MonthlyChart";
 import SpendChart from "./SpendChart";
 import CampaignTable from "./CampaignTable";
+import MailchimpTable from "./MailchimpTable";
 
-interface DashboardProps {
+interface DashboardData {
   fbMonthly: QueryRow[];
   fbCampaigns: QueryRow[];
   ga4Monthly: QueryRow[];
   gadsCampaigns: QueryRow[];
-  lastUpdated: string;
+  mailchimpCampaigns: QueryRow[];
   dateRange: { start: string; end: string };
 }
 
-export default function Dashboard({
-  fbMonthly,
-  fbCampaigns,
-  ga4Monthly,
-  gadsCampaigns,
-  lastUpdated,
-  dateRange,
-}: DashboardProps) {
+interface DashboardProps {
+  initialData: DashboardData;
+}
+
+export default function Dashboard({ initialData }: DashboardProps) {
+  const [data, setData] = useState<DashboardData>(initialData);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(
+    new Date().toLocaleDateString("fr-BE", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  );
+
+  const handleDateChange = useCallback(async (from: string, to: string) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/data?from=${from}&to=${to}`);
+      if (!res.ok) throw new Error("Fetch failed");
+      const newData: DashboardData = await res.json();
+      setData(newData);
+      setLastUpdated(
+        new Date().toLocaleDateString("fr-BE", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    } catch (err) {
+      console.error("Failed to fetch data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Header + Date Picker */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-foreground">
-            Samusocial Brussels — Vue d&apos;ensemble
+            Samusocial Brussels — Reporting
           </h2>
           <p className="text-xs text-text-muted">
-            Période : {dateRange.start} au {dateRange.end}
+            Période : {data.dateRange.start} au {data.dateRange.end} · Mis à jour le{" "}
+            {lastUpdated}
           </p>
         </div>
-        <span className="text-[11px] text-text-muted">
-          Mis à jour le {lastUpdated}
-        </span>
+        <DatePicker
+          dateFrom={data.dateRange.start}
+          dateTo={data.dateRange.end}
+          onApply={handleDateChange}
+          loading={loading}
+        />
       </div>
 
-      {/* KPI Cards */}
-      <StatsCards
-        fbData={fbMonthly}
-        ga4Data={ga4Monthly}
-        gadsData={gadsCampaigns}
-      />
-
-      {/* Charts row */}
-      <div className="grid lg:grid-cols-5 gap-6">
-        <div className="lg:col-span-3">
-          <MonthlyChart fbMonthly={fbMonthly} ga4Monthly={ga4Monthly} />
-        </div>
-        <div className="lg:col-span-2">
-          <SpendChart fbData={fbMonthly} gadsData={gadsCampaigns} />
-        </div>
-      </div>
-
-      {/* Campaign tables */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <CampaignTable
-          title="Campagnes Meta Ads"
-          platform="Facebook & Instagram"
-          color="#1877F2"
-          rows={fbCampaigns}
-          columns={[
-            { key: "campaign_name", label: "Campagne", format: "text" },
-            { key: "spend", label: "Dépenses", format: "currency" },
-            { key: "impressions", label: "Impressions", format: "number" },
-            { key: "clicks", label: "Clics", format: "number" },
-            { key: "ctr", label: "CTR", format: "percent" },
-            { key: "cpc", label: "CPC", format: "currency" },
-          ]}
+      {/* Loading overlay */}
+      <div className={loading ? "opacity-50 pointer-events-none transition-opacity" : "transition-opacity"}>
+        {/* KPI Cards */}
+        <StatsCards
+          fbData={data.fbMonthly}
+          ga4Data={data.ga4Monthly}
+          gadsData={data.gadsCampaigns}
         />
-        <CampaignTable
-          title="Campagnes Google Ads"
-          platform="Search & Performance Max"
-          color="#4285F4"
-          rows={gadsCampaigns}
-          columns={[
-            { key: "campaign.name", label: "Campagne", format: "text" },
-            { key: "metrics.cost_micros", label: "Dépenses", format: "currency" },
-            { key: "metrics.impressions", label: "Impressions", format: "number" },
-            { key: "metrics.clicks", label: "Clics", format: "number" },
-            { key: "metrics.ctr", label: "CTR", format: "percent" },
-            { key: "metrics.conversions", label: "Conv.", format: "number" },
-          ]}
-        />
+
+        {/* Charts row */}
+        <div className="grid lg:grid-cols-5 gap-6 mt-6">
+          <div className="lg:col-span-3">
+            <MonthlyChart fbMonthly={data.fbMonthly} ga4Monthly={data.ga4Monthly} />
+          </div>
+          <div className="lg:col-span-2">
+            <SpendChart fbData={data.fbMonthly} gadsData={data.gadsCampaigns} />
+          </div>
+        </div>
+
+        {/* Campaign tables */}
+        <div className="grid lg:grid-cols-2 gap-6 mt-6">
+          <CampaignTable
+            title="Campagnes Meta Ads"
+            platform="Facebook & Instagram"
+            color="#1877F2"
+            rows={data.fbCampaigns}
+            columns={[
+              { key: "campaign_name", label: "Campagne", format: "text" },
+              { key: "spend", label: "Dépenses", format: "currency" },
+              { key: "impressions", label: "Impr.", format: "number" },
+              { key: "actions:link_click", label: "Link clicks", format: "number" },
+              { key: "actions:landing_page_view", label: "LP Views", format: "number" },
+              { key: "ctr", label: "CTR", format: "percent" },
+              { key: "cost_per_action_type:link_click", label: "CPC (link)", format: "currency" },
+            ]}
+          />
+          <CampaignTable
+            title="Campagnes Google Ads"
+            platform="Search & Performance Max"
+            color="#4285F4"
+            rows={data.gadsCampaigns}
+            columns={[
+              { key: "campaign.name", label: "Campagne", format: "text" },
+              { key: "metrics.cost_micros", label: "Dépenses", format: "currency" },
+              { key: "metrics.impressions", label: "Impr.", format: "number" },
+              { key: "metrics.clicks", label: "Clics", format: "number" },
+              { key: "metrics.ctr", label: "CTR", format: "percent" },
+              { key: "metrics.conversions", label: "Conv.", format: "number" },
+            ]}
+          />
+        </div>
+
+        {/* Mailchimp section */}
+        <div className="mt-6">
+          <h2 className="text-lg font-bold text-foreground mb-3">
+            Performance Email — Mailchimp
+          </h2>
+          <MailchimpTable campaigns={data.mailchimpCampaigns} />
+        </div>
       </div>
     </div>
   );

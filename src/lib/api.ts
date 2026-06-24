@@ -16,56 +16,44 @@ interface ApiResponse<T> {
   };
 }
 
-async function apiPost<T>(endpoint: string, body: Record<string, unknown> = {}): Promise<ApiResponse<T>> {
-  const res = await fetch(`${API_URL}${endpoint}`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-    next: { revalidate: 300 },
-  });
-
-  if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`);
-  }
-
-  return res.json();
+async function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ── Samusocial account config ────────────────────────────────────────────────
+export async function apiPost<T>(endpoint: string, body: Record<string, unknown> = {}): Promise<ApiResponse<T>> {
+  const maxRetries = 3;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      if (attempt > 0) await delay(1000 * attempt);
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        next: { revalidate: 300 },
+      });
 
-export const SAMUSOCIAL_ACCOUNTS = {
-  facebook_ads: {
-    connection_key: "lmr.infocom@gmail.com",
-    account_id: "254104171724853",
-    label: "Meta Ads",
-    settings: {
-      attribution_window:
-        "ATTRIBUTION_MODEL_VIEW_CLICK###VIEW_ATTRIBUTION_WINDOW_1D###CLICK_ATTRIBUTION_WINDOW_7D",
-    },
-  },
-  ga4: {
-    connection_key: "abourdil@adfinitas.be",
-    account_id: "properties/371297123",
-    label: "Google Analytics 4",
-  },
-  google_ads_paid: {
-    connection_key: "abourdil@adfinitas.be",
-    account_id: "6661384976",
-    label: "Google Ads (Paid)",
-    data_view: "campaign",
-  },
-  google_ads_grants: {
-    connection_key: "abourdil@adfinitas.be",
-    account_id: "3625485970",
-    label: "Google Ads (Grants)",
-    data_view: "campaign",
-  },
-} as const;
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get("Retry-After") || 2);
+        await delay(retryAfter * 1000);
+        continue;
+      }
 
-// ── Query types ──────────────────────────────────────────────────────────────
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status} ${res.statusText}`);
+      }
+
+      return res.json();
+    } catch (err) {
+      if (attempt === maxRetries - 1) throw err;
+    }
+  }
+  throw new Error("Max retries exceeded");
+}
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 export interface QueryRow {
   [key: string]: string | number;
@@ -73,30 +61,60 @@ export interface QueryRow {
 
 export interface QueryResult {
   rows: QueryRow[];
-  meta: ApiResponse<unknown>["meta"];
 }
 
-// ── Data fetching functions ──────────────────────────────────────────────────
+// ── Samusocial accounts ──────────────────────────────────────────────────────
+
+export const SAMUSOCIAL = {
+  facebook_ads: {
+    integration_id: "facebook_ads",
+    connection_key: "lmr.infocom@gmail.com",
+    account_id: "254104171724853",
+    settings: {
+      attribution_window:
+        "ATTRIBUTION_MODEL_VIEW_CLICK###VIEW_ATTRIBUTION_WINDOW_1D###CLICK_ATTRIBUTION_WINDOW_7D",
+    },
+  },
+  ga4: {
+    integration_id: "ga4",
+    connection_key: "abourdil@adfinitas.be",
+    account_id: "properties/371297123",
+  },
+  google_ads_paid: {
+    integration_id: "google_ads",
+    connection_key: "abourdil@adfinitas.be",
+    account_id: "6661384976",
+    data_view: "campaign",
+  },
+  mailchimp: {
+    integration_id: "mailchimp",
+    connection_key: "New Samusocial asbl",
+    account_id: "ALL_CAMPAIGNS_SENT_IN_DATE_RANGE",
+    data_view: "campaign_overview",
+    settings: { entity: "campaign" },
+  },
+} as const;
+
+// ── Query helpers ────────────────────────────────────────────────────────────
 
 export async function queryFacebookAds(
   dateFrom: string,
   dateTo: string,
   fields: string[],
   groupBy: string[],
-  limit = 100,
 ): Promise<QueryResult> {
-  const cfg = SAMUSOCIAL_ACCOUNTS.facebook_ads;
+  const cfg = SAMUSOCIAL.facebook_ads;
   const res = await apiPost<{ rows: QueryRow[] }>("/query", {
-    integration_id: "facebook_ads",
+    integration_id: cfg.integration_id,
     connection_key: cfg.connection_key,
     account_id: cfg.account_id,
     date_range: { preset: "custom", start: dateFrom, end: dateTo },
     fields,
     group_by: groupBy,
     settings: cfg.settings,
-    limit,
+    limit: 200,
   });
-  return { rows: res.data.rows, meta: res.meta };
+  return { rows: res.data.rows };
 }
 
 export async function queryGA4(
@@ -104,41 +122,57 @@ export async function queryGA4(
   dateTo: string,
   fields: string[],
   groupBy: string[],
-  limit = 100,
 ): Promise<QueryResult> {
-  const cfg = SAMUSOCIAL_ACCOUNTS.ga4;
+  const cfg = SAMUSOCIAL.ga4;
   const res = await apiPost<{ rows: QueryRow[] }>("/query", {
-    integration_id: "ga4",
+    integration_id: cfg.integration_id,
     connection_key: cfg.connection_key,
     account_id: cfg.account_id,
     date_range: { preset: "custom", start: dateFrom, end: dateTo },
     fields,
     group_by: groupBy,
-    limit,
+    limit: 200,
   });
-  return { rows: res.data.rows, meta: res.meta };
+  return { rows: res.data.rows };
 }
 
 export async function queryGoogleAds(
-  accountKey: "google_ads_paid" | "google_ads_grants",
   dateFrom: string,
   dateTo: string,
   fields: string[],
   groupBy: string[],
-  limit = 100,
 ): Promise<QueryResult> {
-  const cfg = SAMUSOCIAL_ACCOUNTS[accountKey];
+  const cfg = SAMUSOCIAL.google_ads_paid;
   const res = await apiPost<{ rows: QueryRow[] }>("/query", {
-    integration_id: "google_ads",
+    integration_id: cfg.integration_id,
     connection_key: cfg.connection_key,
     account_id: cfg.account_id,
     data_view: cfg.data_view,
     date_range: { preset: "custom", start: dateFrom, end: dateTo },
     fields,
     group_by: groupBy,
-    limit,
+    limit: 200,
   });
-  return { rows: res.data.rows, meta: res.meta };
+  return { rows: res.data.rows };
 }
 
-export { apiPost };
+export async function queryMailchimp(
+  dateFrom: string,
+  dateTo: string,
+  fields: string[],
+  groupBy: string[],
+): Promise<QueryResult> {
+  const cfg = SAMUSOCIAL.mailchimp;
+  const res = await apiPost<{ rows: QueryRow[] }>("/query", {
+    integration_id: cfg.integration_id,
+    connection_key: cfg.connection_key,
+    account_id: cfg.account_id,
+    data_view: cfg.data_view,
+    settings: cfg.settings,
+    date_range: { preset: "custom", start: dateFrom, end: dateTo },
+    fields,
+    group_by: groupBy,
+    limit: 200,
+  });
+  return { rows: res.data.rows };
+}
