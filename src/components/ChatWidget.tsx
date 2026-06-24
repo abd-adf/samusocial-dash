@@ -115,17 +115,17 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
       {/* Toggle button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 bg-primary text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 bg-[#f04f26] text-white p-5 rounded-full shadow-lg shadow-[#f04f26]/30 hover:shadow-xl hover:shadow-[#f04f26]/40 transition-all hover:scale-110 ring-4 ring-[#f04f26]/20"
         aria-label={open ? "Fermer le chat" : "Ouvrir le chat"}
       >
-        {open ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
+        {open ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
       </button>
 
       {/* Chat panel */}
       {open && (
         <div className="fixed bottom-24 right-6 z-50 w-[380px] max-h-[520px] bg-surface border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="bg-primary text-white px-4 py-3 flex items-center gap-3">
+          <div className="bg-[#f04f26] text-white px-4 py-3 flex items-center gap-3">
             <MessageCircle className="w-4 h-4" />
             <div>
               <p className="text-sm font-semibold">Assistant Data</p>

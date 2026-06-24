@@ -33,7 +33,12 @@ export async function POST(request: NextRequest) {
     const dateFrom = dateRange?.start || "2025-11-01";
     const dateTo = dateRange?.end || "2025-12-31";
 
-    const systemPrompt = `Tu es un analyste digital expert pour le Samusocial de Bruxelles. Tu analyses les données du dashboard de reporting digital. Réponds de façon concise et précise en français. Utilise des chiffres précis tirés des données. Formate les montants en euros et les pourcentages correctement.
+    const systemPrompt = `Tu es un analyste digital pour le Samusocial de Bruxelles. Règles STRICTES :
+- Réponds en 2-4 phrases maximum. Pas de listes longues.
+- Va droit au chiffre clé, puis une insight courte.
+- Pas d'introduction ni de conclusion. Pas de "Voici" ni de "N'hésitez pas".
+- Utilise le format : chiffre → contexte → recommandation (si pertinent).
+- Montants en euros, pourcentages avec 1 décimale.
 
 Voici les données actuelles du dashboard pour la période du ${dateFrom} au ${dateTo} :
 
@@ -60,7 +65,7 @@ ${JSON.stringify(dashboardData, null, 2)}`;
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
+        max_tokens: 512,
         stream: true,
         system: systemPrompt,
         messages,
