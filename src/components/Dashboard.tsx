@@ -185,7 +185,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
         </section>
       </div>
 
-      <ChatWidget dateRange={data.dateRange} />
+      <ChatWidget dateRange={data.dateRange} dashboardData={data} />
     </div>
   );
 }

@@ -37,34 +37,18 @@ export async function GET(request: NextRequest) {
   const dateTo = searchParams.get("to") || "2025-12-31";
 
   try {
-    // Batch 1: Facebook Ads
-    const [fbMonthly, fbCampaigns] = await Promise.all([
-      queryFacebookAds(dateFrom, dateTo, FB_MONTHLY_FIELDS, ["month"]),
-      queryFacebookAds(dateFrom, dateTo, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
-    ]);
-
-    // Batch 2: GA4 traffic + Google Ads
-    const [ga4Monthly, gadsCampaigns] = await Promise.all([
-      queryGA4(
-        dateFrom, dateTo,
-        ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"],
-        ["month"],
-      ),
-      queryGoogleAds(dateFrom, dateTo, GADS_FIELDS, ["campaign.name"]),
-    ]);
-
-    // Batch 3: Donations + Mailchimp
-    const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
+    // All API calls in parallel for fastest load
+    const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
       await Promise.all([
+        queryFacebookAds(dateFrom, dateTo, FB_MONTHLY_FIELDS, ["month"]),
+        queryFacebookAds(dateFrom, dateTo, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
+        queryGA4(dateFrom, dateTo, ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"], ["month"]),
+        queryGoogleAds(dateFrom, dateTo, GADS_FIELDS, ["campaign.name"]),
         queryGA4(dateFrom, dateTo, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
         queryGA4(dateFrom, dateTo, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
         queryGA4(dateFrom, dateTo, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
         queryGA4(dateFrom, dateTo, ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName", "transactions", "purchaseRevenue"], ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName"]),
-        queryMailchimp(
-          dateFrom, dateTo,
-          ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"],
-          ["campaignName"],
-        ),
+        queryMailchimp(dateFrom, dateTo, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
       ]);
 
     return NextResponse.json({

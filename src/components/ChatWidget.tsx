@@ -10,9 +10,10 @@ interface Message {
 
 interface ChatWidgetProps {
   dateRange: { start: string; end: string };
+  dashboardData: unknown;
 }
 
-export default function ChatWidget({ dateRange }: ChatWidgetProps) {
+export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -51,6 +52,7 @@ export default function ChatWidget({ dateRange }: ChatWidgetProps) {
         body: JSON.stringify({
           message: text,
           history: messages,
+          dashboardData,
           dateRange,
         }),
       });

@@ -34,34 +34,18 @@ const GADS_FIELDS = [
 ];
 
 export default async function Home() {
-  // Batch 1: Facebook Ads
-  const [fbMonthly, fbCampaigns] = await Promise.all([
-    queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
-    queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
-  ]);
-
-  // Batch 2: GA4 + Google Ads
-  const [ga4Monthly, gadsCampaigns] = await Promise.all([
-    queryGA4(
-      DATE_FROM, DATE_TO,
-      ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"],
-      ["month"],
-    ),
-    queryGoogleAds(DATE_FROM, DATE_TO, GADS_FIELDS, ["campaign.name"]),
-  ]);
-
-  // Batch 3: Donations + Mailchimp
-  const [donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
+  // All API calls in parallel for fastest load
+  const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
     await Promise.all([
+      queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
+      queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
+      queryGA4(DATE_FROM, DATE_TO, ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"], ["month"]),
+      queryGoogleAds(DATE_FROM, DATE_TO, GADS_FIELDS, ["campaign.name"]),
       queryGA4(DATE_FROM, DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
       queryGA4(DATE_FROM, DATE_TO, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
       queryGA4(DATE_FROM, DATE_TO, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
       queryGA4(DATE_FROM, DATE_TO, ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName", "transactions", "purchaseRevenue"], ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName"]),
-      queryMailchimp(
-        DATE_FROM, DATE_TO,
-        ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"],
-        ["campaignName"],
-      ),
+      queryMailchimp(DATE_FROM, DATE_TO, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
     ]);
 
   const initialData: DashboardData = {
