@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +23,6 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = process.env.CHAT_AI_KEY;
-    console.log("CHAT_AI_KEY length:", apiKey?.length, "starts:", apiKey?.slice(0, 12));
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "CHAT_AI_KEY is not configured" }),
@@ -35,16 +33,13 @@ export async function POST(request: NextRequest) {
     const dateFrom = dateRange?.start || "2025-11-01";
     const dateTo = dateRange?.end || "2025-12-31";
 
-    // Build system prompt with data passed from client
     const systemPrompt = `Tu es un analyste digital expert pour le Samusocial de Bruxelles. Tu analyses les données du dashboard de reporting digital. Réponds de façon concise et précise en français. Utilise des chiffres précis tirés des données. Formate les montants en euros et les pourcentages correctement.
 
 Voici les données actuelles du dashboard pour la période du ${dateFrom} au ${dateTo} :
 
 ${JSON.stringify(dashboardData, null, 2)}`;
 
-    // Build messages array from history + current message
     const messages: { role: "user" | "assistant"; content: string }[] = [];
-
     if (history && Array.isArray(history)) {
       for (const msg of history) {
         messages.push({
@@ -53,39 +48,76 @@ ${JSON.stringify(dashboardData, null, 2)}`;
         });
       }
     }
-
     messages.push({ role: "user", content: message });
 
-    // Create Anthropic client and stream response
-    const anthropic = new Anthropic({ apiKey });
-
-    const stream = anthropic.messages.stream({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages,
+    // Direct fetch to Anthropic API (avoids SDK issues with Netlify)
+    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 4096,
+        stream: true,
+        system: systemPrompt,
+        messages,
+      }),
     });
 
+    if (!anthropicRes.ok) {
+      const errText = await anthropicRes.text();
+      console.error("Anthropic API error:", anthropicRes.status, errText);
+      return new Response(
+        JSON.stringify({ error: `API error: ${anthropicRes.status}` }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    // Stream SSE response back as plain text
     const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    const reader = anthropicRes.body?.getReader();
 
     const responseStream = new ReadableStream({
       async start(controller) {
+        if (!reader) {
+          controller.close();
+          return;
+        }
+        let buffer = "";
         try {
-          for await (const event of stream) {
-            if (
-              event.type === "content_block_delta" &&
-              event.delta.type === "text_delta"
-            ) {
-              controller.enqueue(encoder.encode(event.delta.text));
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const data = line.slice(6);
+              if (data === "[DONE]") continue;
+              try {
+                const event = JSON.parse(data);
+                if (
+                  event.type === "content_block_delta" &&
+                  event.delta?.type === "text_delta"
+                ) {
+                  controller.enqueue(encoder.encode(event.delta.text));
+                }
+              } catch {
+                // skip non-JSON lines
+              }
             }
           }
-          controller.close();
         } catch (error) {
-          console.error("Streaming error:", error);
-          const errorMsg = error instanceof Error ? error.message : "Unknown streaming error";
-          controller.enqueue(encoder.encode(`\n\n[Erreur: ${errorMsg}]`));
-          controller.close();
+          console.error("Stream error:", error);
         }
+        controller.close();
       },
     });
 
