@@ -2,8 +2,9 @@
 
 import { Heart, TrendingUp, Repeat, Banknote } from "lucide-react";
 import {
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -150,10 +151,16 @@ export default function DonationsPanel({
           </p>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ea" />
                 <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#6b7280" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#6b7280" }} />
+                <YAxis yAxisId="revenue" tick={{ fontSize: 11, fill: "#6b7280" }} />
+                <YAxis
+                  yAxisId="avg"
+                  orientation="right"
+                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  domain={[0, "auto"]}
+                />
                 <Tooltip
                   contentStyle={{
                     background: "#fff",
@@ -176,18 +183,28 @@ export default function DonationsPanel({
                   wrapperStyle={{ fontSize: "11px", paddingBottom: "8px" }}
                 />
                 <Bar
+                  yAxisId="revenue"
                   dataKey="Dons uniques (€)"
                   fill="#f04f26"
                   radius={[4, 4, 0, 0]}
                   stackId="stack"
                 />
                 <Bar
+                  yAxisId="revenue"
                   dataKey="Dons réguliers (€)"
                   fill="#8b5cf6"
                   radius={[4, 4, 0, 0]}
                   stackId="stack"
                 />
-              </BarChart>
+                <Line
+                  yAxisId="avg"
+                  type="monotone"
+                  dataKey="Don moyen (€)"
+                  stroke="#10b981"
+                  strokeWidth={2.5}
+                  dot={{ r: 5, fill: "#10b981", strokeWidth: 2, stroke: "#fff" }}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
