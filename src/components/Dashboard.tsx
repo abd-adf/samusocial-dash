@@ -19,7 +19,6 @@ export interface DashboardData {
   donationsByCategory: QueryRow[];
   donationsMonthly: QueryRow[];
   donationsMonthlyByCategory: QueryRow[];
-  donationsByChannel: QueryRow[];
   mailchimpCampaigns: QueryRow[];
   dateRange: { start: string; end: string };
 }
@@ -98,7 +97,6 @@ export default function Dashboard({ initialData }: DashboardProps) {
             byCategory={data.donationsByCategory}
             monthlyTotals={data.donationsMonthly}
             monthlyByCategory={data.donationsMonthlyByCategory}
-            byChannel={data.donationsByChannel}
           />
         </section>
 

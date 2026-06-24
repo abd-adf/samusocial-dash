@@ -35,7 +35,7 @@ const GADS_FIELDS = [
 
 export default async function Home() {
   // All API calls in parallel for fastest load
-  const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
+  const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
     await Promise.all([
       queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
       queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
@@ -44,7 +44,6 @@ export default async function Home() {
       queryGA4(DATE_FROM, DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
       queryGA4(DATE_FROM, DATE_TO, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
       queryGA4(DATE_FROM, DATE_TO, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
-      queryGA4(DATE_FROM, DATE_TO, ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName", "transactions", "purchaseRevenue"], ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName"]),
       queryMailchimp(DATE_FROM, DATE_TO, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
     ]);
 
@@ -56,7 +55,6 @@ export default async function Home() {
     donationsByCategory: donationsByCategory.rows,
     donationsMonthly: donationsMonthly.rows,
     donationsMonthlyByCategory: donationsMonthlyByCategory.rows,
-    donationsByChannel: donationsByChannel.rows,
     mailchimpCampaigns: mailchimpCampaigns.rows,
     dateRange: { start: DATE_FROM, end: DATE_TO },
   };

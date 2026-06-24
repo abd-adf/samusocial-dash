@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // All API calls in parallel for fastest load
-    const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, donationsByChannel, mailchimpCampaigns] =
+    const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
       await Promise.all([
         queryFacebookAds(dateFrom, dateTo, FB_MONTHLY_FIELDS, ["month"]),
         queryFacebookAds(dateFrom, dateTo, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
@@ -47,7 +47,6 @@ export async function GET(request: NextRequest) {
         queryGA4(dateFrom, dateTo, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
         queryGA4(dateFrom, dateTo, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
         queryGA4(dateFrom, dateTo, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
-        queryGA4(dateFrom, dateTo, ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName", "transactions", "purchaseRevenue"], ["sessionManualSource", "sessionManualMedium", "sessionManualCampaignName"]),
         queryMailchimp(dateFrom, dateTo, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
       ]);
 
@@ -59,7 +58,6 @@ export async function GET(request: NextRequest) {
       donationsByCategory: donationsByCategory.rows,
       donationsMonthly: donationsMonthly.rows,
       donationsMonthlyByCategory: donationsMonthlyByCategory.rows,
-      donationsByChannel: donationsByChannel.rows,
       mailchimpCampaigns: mailchimpCampaigns.rows,
       dateRange: { start: dateFrom, end: dateTo },
     });
