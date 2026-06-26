@@ -255,10 +255,10 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             style={{ padding: "16px 18px", background: ACCENT_GRAD }}
           >
             <div
-              className="flex items-center justify-center shrink-0 overflow-hidden"
+              className="flex items-center justify-center shrink-0"
               style={{ width: 38, height: 38, borderRadius: 11, background: "rgba(255,255,255,.18)" }}
             >
-              <img src="/logos/adfinitas.png" alt="Adfinitas" width={28} height={28} style={{ objectFit: "contain" }} />
+              <ChatIconSmall />
             </div>
             <div>
               <div className="text-[15.5px] font-bold text-white">Assistant Data</div>
