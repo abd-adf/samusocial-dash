@@ -20,6 +20,9 @@ export interface DashboardData {
   donationsMonthly: QueryRow[];
   donationsMonthlyByCategory: QueryRow[];
   mailchimpCampaigns: QueryRow[];
+  prevDonationsByCategory?: QueryRow[];
+  prevDonationsMonthly?: QueryRow[];
+  prevDonationsMonthlyByCategory?: QueryRow[];
   dateRange: { start: string; end: string };
 }
 
@@ -97,6 +100,7 @@ export default function Dashboard({ initialData }: DashboardProps) {
             byCategory={data.donationsByCategory}
             monthlyTotals={data.donationsMonthly}
             monthlyByCategory={data.donationsMonthlyByCategory}
+            prevByCategory={data.prevDonationsByCategory}
           />
         </section>
 

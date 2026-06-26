@@ -7,6 +7,8 @@ export const revalidate = 300;
 
 const DATE_FROM = "2025-11-01";
 const DATE_TO = "2025-12-31";
+const PREV_DATE_FROM = "2024-11-01";
+const PREV_DATE_TO = "2024-12-31";
 
 const FB_CAMPAIGN_FIELDS = [
   "campaign_name", "spend", "impressions", "clicks", "ctr", "cpc",
@@ -34,18 +36,26 @@ const GADS_FIELDS = [
 ];
 
 export default async function Home() {
-  // All API calls in parallel for fastest load
-  const [fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns, donationsByCategory, donationsMonthly, donationsMonthlyByCategory, mailchimpCampaigns] =
-    await Promise.all([
-      queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
-      queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
-      queryGA4(DATE_FROM, DATE_TO, ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"], ["month"]),
-      queryGoogleAds(DATE_FROM, DATE_TO, GADS_FIELDS, ["campaign.name"]),
-      queryGA4(DATE_FROM, DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
-      queryGA4(DATE_FROM, DATE_TO, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
-      queryGA4(DATE_FROM, DATE_TO, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
-      queryMailchimp(DATE_FROM, DATE_TO, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
-    ]);
+  // All API calls in parallel for fastest load (current + Y-1 donations)
+  const [
+    fbMonthly, fbCampaigns, ga4Monthly, gadsCampaigns,
+    donationsByCategory, donationsMonthly, donationsMonthlyByCategory,
+    mailchimpCampaigns,
+    prevDonationsByCategory, prevDonationsMonthly, prevDonationsMonthlyByCategory,
+  ] = await Promise.all([
+    queryFacebookAds(DATE_FROM, DATE_TO, FB_MONTHLY_FIELDS, ["month"]),
+    queryFacebookAds(DATE_FROM, DATE_TO, FB_CAMPAIGN_FIELDS, ["campaign_name"]),
+    queryGA4(DATE_FROM, DATE_TO, ["month", "sessions", "activeUsers", "newUsers", "screenPageViews", "bounceRate", "averageSessionDuration", "conversions"], ["month"]),
+    queryGoogleAds(DATE_FROM, DATE_TO, GADS_FIELDS, ["campaign.name"]),
+    queryGA4(DATE_FROM, DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
+    queryGA4(DATE_FROM, DATE_TO, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
+    queryGA4(DATE_FROM, DATE_TO, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
+    queryMailchimp(DATE_FROM, DATE_TO, ["campaignName", "sendTime", "emailsSent", "opens", "uniqueOpens", "openRate", "clicks", "uniqueClicks", "clickRate", "bounces", "unsubscribed"], ["campaignName"]),
+    // Y-1 donations
+    queryGA4(PREV_DATE_FROM, PREV_DATE_TO, ["itemCategory", "itemRevenue", "itemsPurchased"], ["itemCategory"]),
+    queryGA4(PREV_DATE_FROM, PREV_DATE_TO, ["month", "totalRevenue", "ecommercePurchases", "transactions", "purchaseRevenue", "averagePurchaseRevenue"], ["month"]),
+    queryGA4(PREV_DATE_FROM, PREV_DATE_TO, ["month", "itemCategory", "itemRevenue", "itemsPurchased"], ["month", "itemCategory"]),
+  ]);
 
   const initialData: DashboardData = {
     fbMonthly: fbMonthly.rows,
@@ -56,6 +66,9 @@ export default async function Home() {
     donationsMonthly: donationsMonthly.rows,
     donationsMonthlyByCategory: donationsMonthlyByCategory.rows,
     mailchimpCampaigns: mailchimpCampaigns.rows,
+    prevDonationsByCategory: prevDonationsByCategory.rows,
+    prevDonationsMonthly: prevDonationsMonthly.rows,
+    prevDonationsMonthlyByCategory: prevDonationsMonthlyByCategory.rows,
     dateRange: { start: DATE_FROM, end: DATE_TO },
   };
 

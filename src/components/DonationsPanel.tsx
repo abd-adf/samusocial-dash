@@ -13,18 +13,20 @@ import {
   Legend,
 } from "recharts";
 import type { QueryRow } from "@/lib/api";
-import { formatCurrency, formatNumber } from "@/lib/format";
+import { formatCurrency, formatNumber, formatVariation } from "@/lib/format";
 
 interface DonationsPanelProps {
   byCategory: QueryRow[];
   monthlyTotals: QueryRow[];
   monthlyByCategory: QueryRow[];
+  prevByCategory?: QueryRow[];
 }
 
 export default function DonationsPanel({
   byCategory,
   monthlyTotals,
   monthlyByCategory,
+  prevByCategory,
 }: DonationsPanelProps) {
   const once = byCategory.find((r) => r.itemCategory === "once");
   const regular = byCategory.find((r) => r.itemCategory === "regular");
@@ -39,6 +41,20 @@ export default function DonationsPanel({
   const onceCount = Number(once?.itemsPurchased) || 0;
   const regularRevenue = Number(regular?.itemRevenue) || 0;
   const regularCount = Number(regular?.itemsPurchased) || 0;
+
+  // Y-1 calculations
+  const prevOnce = prevByCategory?.find((r) => r.itemCategory === "once");
+  const prevRegular = prevByCategory?.find((r) => r.itemCategory === "regular");
+  const prevTotalRevenue =
+    prevByCategory ? (Number(prevOnce?.itemRevenue) || 0) + (Number(prevRegular?.itemRevenue) || 0) : undefined;
+  const prevTotalDonations =
+    prevByCategory ? (Number(prevOnce?.itemsPurchased) || 0) + (Number(prevRegular?.itemsPurchased) || 0) : undefined;
+  const prevAvgDonation =
+    prevTotalDonations && prevTotalDonations > 0 && prevTotalRevenue !== undefined
+      ? prevTotalRevenue / prevTotalDonations
+      : undefined;
+  const prevOnceRevenue = prevByCategory ? Number(prevOnce?.itemRevenue) || 0 : undefined;
+  const prevRegularRevenue = prevByCategory ? Number(prevRegular?.itemRevenue) || 0 : undefined;
 
   // Build monthly chart data
   const monthNames: Record<string, string> = {
@@ -83,6 +99,7 @@ export default function DonationsPanel({
       color: "text-success",
       bg: "bg-success/10",
       highlight: true,
+      yoy: formatVariation(totalRevenue, prevTotalRevenue),
     },
     {
       label: "Don moyen",
@@ -92,6 +109,7 @@ export default function DonationsPanel({
       color: "text-primary",
       bg: "bg-primary/10",
       highlight: false,
+      yoy: formatVariation(avgDonation, prevAvgDonation),
     },
     {
       label: "Dons uniques",
@@ -101,6 +119,7 @@ export default function DonationsPanel({
       color: "text-accent",
       bg: "bg-accent/10",
       highlight: false,
+      yoy: formatVariation(onceRevenue, prevOnceRevenue),
     },
     {
       label: "Dons réguliers",
@@ -110,6 +129,7 @@ export default function DonationsPanel({
       color: "text-[#8b5cf6]",
       bg: "bg-[#8b5cf6]/10",
       highlight: false,
+      yoy: formatVariation(regularRevenue, prevRegularRevenue),
     },
   ];
 
@@ -138,6 +158,19 @@ export default function DonationsPanel({
               {kpi.value}
             </p>
             <p className="text-xs text-text-muted mt-1">{kpi.sub}</p>
+            {kpi.yoy && (
+              <p
+                className={`text-[11px] font-medium mt-1.5 ${
+                  kpi.yoy.positive === null
+                    ? "text-text-muted"
+                    : kpi.yoy.positive
+                      ? "text-success"
+                      : "text-red-500"
+                }`}
+              >
+                {kpi.yoy.text}
+              </p>
+            )}
           </div>
         ))}
       </div>

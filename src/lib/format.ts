@@ -21,6 +21,22 @@ export function formatDuration(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
+export function formatVariation(
+  current: number,
+  previous: number | undefined
+): { text: string; positive: boolean | null } {
+  if (previous === undefined || previous === 0) {
+    return { text: "— vs Y-1", positive: null };
+  }
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct >= 0 ? "+" : "";
+  const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "";
+  return {
+    text: `${arrow} ${sign}${pct.toFixed(0)} % vs Y-1`,
+    positive: pct >= 0,
+  };
+}
+
 export function monthLabel(month: string): string {
   const [year, m] = month.split("-");
   const months = [
