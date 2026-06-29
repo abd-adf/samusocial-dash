@@ -10,6 +10,9 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Samusocial — Reporting Dashboard",
   description: "Dashboard de reporting multi-plateformes pour le New Samusocial ASBL",
+  icons: {
+    icon: "/logos/adfinitas.png",
+  },
 };
 
 export default function RootLayout({
