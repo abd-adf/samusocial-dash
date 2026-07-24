@@ -43,17 +43,21 @@ export async function POST(request: NextRequest) {
     const dateFrom = dateRange?.start || "2025-11-01";
     const dateTo = dateRange?.end || "2025-12-31";
 
-    // --- Log the user question ---
-    try {
+    // --- Log the user question to Google Sheet ---
+    const webhookUrl = process.env.CHAT_LOG_WEBHOOK;
+    if (webhookUrl) {
       const logEntry = {
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toLocaleString("fr-BE", { timeZone: "Europe/Brussels" }),
         question: message,
-        dateRange: { start: dateFrom, end: dateTo },
+        dateRange: `${dateFrom} → ${dateTo}`,
+        sessionId: request.headers.get("x-session-id") || "anonymous",
         userAgent: request.headers.get("user-agent") || "unknown",
       };
-      console.log("[CHAT_LOG]", JSON.stringify(logEntry));
-    } catch {
-      // Don't let logging break the chat
+      fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(logEntry),
+      }).catch(() => { /* ne pas bloquer le chat si le log échoue */ });
     }
 
     const systemPrompt = `Tu es un analyste digital pour le Samusocial de Bruxelles. Règles STRICTES :

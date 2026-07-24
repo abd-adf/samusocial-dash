@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Loader2, Download } from "lucide-react";
 import Image from "next/image";
 import {
@@ -210,6 +210,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
   const inputRef = useRef<HTMLInputElement>(null);
   const chatBodyRef = useRef<HTMLDivElement>(null);
 
+  const sessionId = useMemo(() => `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, []);
   const isLimitReached = questionCount >= MAX_QUESTIONS;
 
   const scrollToBottom = useCallback(() => {
@@ -239,7 +240,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-session-id": sessionId },
         body: JSON.stringify({
           message: msg,
           history: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -663,57 +664,62 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
               style={{
                 borderTop: "1px solid #F0F1F4",
                 marginTop: 12,
-                padding: "20px 18px",
-                textAlign: "center",
+                overflow: "hidden",
               }}
             >
-              <div
-                style={{
-                  borderRadius: 16,
-                  background: "linear-gradient(135deg, #FFF7F3 0%, #FFF0E8 100%)",
-                  border: `1px solid ${CHIP_BORDER}`,
-                  padding: "24px 20px",
-                }}
-              >
+              {/* Photo bandeau — full width, pas de crop circulaire */}
+              <div style={{ position: "relative", width: "100%", height: 180, overflow: "hidden" }}>
+                <Image
+                  src="/contact-adfinitas.jpg"
+                  alt="Alain Bourdil & Stefaan Nechelput - Adfinitas"
+                  fill
+                  style={{ objectFit: "cover", objectPosition: "center 30%" }}
+                />
+                {/* Dégradé bas pour transition douce vers le texte */}
                 <div
                   style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    overflow: "hidden",
-                    margin: "0 auto 14px",
-                    border: `3px solid ${ACCENT}`,
-                    boxShadow: "0 4px 16px rgba(241,90,36,.2)",
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: 60,
+                    background: "linear-gradient(to top, #fff 0%, transparent 100%)",
+                  }}
+                />
+              </div>
+
+              {/* Contenu texte + CTA */}
+              <div style={{ padding: "0 22px 22px", textAlign: "center", marginTop: -10 }}>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "#2A2F3A",
+                    marginBottom: 2,
                   }}
                 >
-                  <Image
-                    src="/contact-adfinitas.jpg"
-                    alt="Alain Bourdil & Stefaan Nechelput - Adfinitas"
-                    width={80}
-                    height={80}
-                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
-                  />
+                  Envie d&apos;aller plus loin ?
                 </div>
                 <div
                   style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#2A2F3A",
-                    marginBottom: 4,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: ACCENT,
+                    marginBottom: 10,
                   }}
                 >
-                  Vous avez utilisé vos {MAX_QUESTIONS} questions
+                  Alain Bourdil & Stefaan Nechelput
                 </div>
                 <div
                   style={{
                     fontSize: 12.5,
                     color: "#6B7280",
-                    lineHeight: 1.5,
-                    marginBottom: 16,
+                    lineHeight: 1.55,
+                    marginBottom: 18,
                   }}
                 >
-                  Pour aller plus loin dans l&apos;analyse de vos résultats,
-                  contactez notre équipe. Nous serons ravis de vous accompagner.
+                  Vous avez utilisé vos {MAX_QUESTIONS} questions.
+                  Contactez-nous pour une analyse approfondie de vos résultats et des recommandations sur mesure.
                 </div>
                 <a
                   href="mailto:abourdil@adfinitas.be"
@@ -721,24 +727,24 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "12px 24px",
-                    borderRadius: 12,
+                    padding: "13px 28px",
+                    borderRadius: 13,
                     background: ACCENT_GRAD,
                     color: "#fff",
-                    fontSize: 13,
+                    fontSize: 13.5,
                     fontWeight: 700,
                     textDecoration: "none",
-                    boxShadow: "0 4px 14px rgba(241,90,36,.3)",
+                    boxShadow: "0 6px 20px rgba(241,90,36,.3)",
                     transition: "transform .15s ease, box-shadow .15s ease",
                     fontFamily: "inherit",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-1px)";
-                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(241,90,36,.4)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                    e.currentTarget.style.boxShadow = "0 8px 28px rgba(241,90,36,.4)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 4px 14px rgba(241,90,36,.3)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(241,90,36,.3)";
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
