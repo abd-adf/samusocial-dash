@@ -664,62 +664,66 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
               style={{
                 borderTop: "1px solid #F0F1F4",
                 marginTop: 12,
-                overflow: "hidden",
+                padding: "20px 18px",
+                textAlign: "center",
               }}
             >
-              {/* Photo bandeau — full width, pas de crop circulaire */}
-              <div style={{ position: "relative", width: "100%", height: 180, overflow: "hidden" }}>
-                <Image
-                  src="/contact-adfinitas.jpg"
-                  alt="Alain Bourdil & Stefaan Nechelput - Adfinitas"
-                  fill
-                  style={{ objectFit: "cover", objectPosition: "center 30%" }}
-                />
-                {/* Dégradé bas pour transition douce vers le texte */}
+              <div
+                style={{
+                  borderRadius: 16,
+                  background: "linear-gradient(135deg, #FFF7F3 0%, #FFF0E8 100%)",
+                  border: `1px solid ${CHIP_BORDER}`,
+                  padding: "24px 20px",
+                }}
+              >
                 <div
                   style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: 60,
-                    background: "linear-gradient(to top, #fff 0%, transparent 100%)",
-                  }}
-                />
-              </div>
-
-              {/* Contenu texte + CTA */}
-              <div style={{ padding: "0 22px 22px", textAlign: "center", marginTop: -10 }}>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 800,
+                    fontSize: 14,
+                    fontWeight: 700,
                     color: "#2A2F3A",
-                    marginBottom: 2,
+                    marginBottom: 4,
                   }}
                 >
-                  Envie d&apos;aller plus loin ?
+                  Vous avez utilisé vos {MAX_QUESTIONS} questions
+                </div>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: "#6B7280",
+                    lineHeight: 1.5,
+                    marginBottom: 16,
+                  }}
+                >
+                  Pour aller plus loin dans l&apos;analyse de vos résultats,
+                  contactez notre équipe. Nous serons ravis de vous accompagner.
+                </div>
+                {/* Photo rectangulaire */}
+                <div
+                  style={{
+                    width: "100%",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    marginBottom: 16,
+                    boxShadow: "0 4px 16px rgba(0,0,0,.08)",
+                  }}
+                >
+                  <Image
+                    src="/contact-adfinitas.jpg"
+                    alt="Alain Bourdil & Stefaan Nechelput - Adfinitas"
+                    width={400}
+                    height={220}
+                    style={{ objectFit: "cover", width: "100%", height: "auto" }}
+                  />
                 </div>
                 <div
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
                     color: ACCENT,
-                    marginBottom: 10,
+                    marginBottom: 14,
                   }}
                 >
                   Alain Bourdil & Stefaan Nechelput
-                </div>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    color: "#6B7280",
-                    lineHeight: 1.55,
-                    marginBottom: 18,
-                  }}
-                >
-                  Vous avez utilisé vos {MAX_QUESTIONS} questions.
-                  Contactez-nous pour une analyse approfondie de vos résultats et des recommandations sur mesure.
                 </div>
                 <a
                   href="mailto:abourdil@adfinitas.be"
@@ -727,24 +731,24 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "13px 28px",
-                    borderRadius: 13,
+                    padding: "12px 24px",
+                    borderRadius: 12,
                     background: ACCENT_GRAD,
                     color: "#fff",
-                    fontSize: 13.5,
+                    fontSize: 13,
                     fontWeight: 700,
                     textDecoration: "none",
-                    boxShadow: "0 6px 20px rgba(241,90,36,.3)",
+                    boxShadow: "0 4px 14px rgba(241,90,36,.3)",
                     transition: "transform .15s ease, box-shadow .15s ease",
                     fontFamily: "inherit",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow = "0 8px 28px rgba(241,90,36,.4)";
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(241,90,36,.4)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(241,90,36,.3)";
+                    e.currentTarget.style.boxShadow = "0 4px 14px rgba(241,90,36,.3)";
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
