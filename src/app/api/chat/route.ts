@@ -76,30 +76,14 @@ ${campaignReport}
 
 Voici les données actuelles du dashboard pour la période du ${dateFrom} au ${dateTo} :
 
-${JSON.stringify(dashboardData, null, 2)}
-
-OBLIGATION ABSOLUE — tu DOIS terminer CHAQUE réponse par exactement ce format, sans exception :
-
-ta réponse texte ici
-:::META:::
-{"sources":["source1","source2"],"followUps":["question 1 ?","question 2 ?","question 3 ?"],"chart":{"type":"bar","data":[{"name":"label1","value":123},{"name":"label2","value":456}],"label":"légende axe Y"}}
-
-Règles du bloc :::META::: :
-- "sources" : OBLIGATOIRE. Les sources de données que tu as utilisées parmi : "Meta Ads", "Google Ads", "GA4", "GA4 - Donations", "Mailchimp", "Rapport EOY"
-- "followUps" : OBLIGATOIRE. Exactement 3 questions de suivi courtes et pertinentes
-- "chart" : inclus-le si ta réponse compare des chiffres ou montre une évolution. "type" : "bar" ou "line". Omets "chart" si non pertinent
-- Le JSON doit être sur UNE SEULE ligne, valide, sans retour à la ligne`;
+${JSON.stringify(dashboardData, null, 2)}`;
 
     const messages: { role: "user" | "assistant"; content: string }[] = [];
     if (history && Array.isArray(history)) {
       for (const msg of history) {
-        // Strip :::META::: blocks from previous assistant responses
-        const cleanContent = msg.role === "assistant"
-          ? msg.content.split(":::META:::")[0].trim()
-          : msg.content;
         messages.push({
           role: msg.role as "user" | "assistant",
-          content: cleanContent,
+          content: msg.content,
         });
       }
     }
@@ -115,7 +99,7 @@ Règles du bloc :::META::: :
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 1024,
+        max_tokens: 512,
         stream: true,
         system: systemPrompt,
         messages,

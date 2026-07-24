@@ -3,30 +3,10 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Loader2, Download } from "lucide-react";
 import Image from "next/image";
-import {
-  BarChart, Bar, LineChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-} from "recharts";
-
-// ── Types ───────────────────────────────────────────────────────────────────
-
-interface ChartData {
-  type: "bar" | "line";
-  data: { name: string; value: number }[];
-  label: string;
-  color?: string;
-}
-
-interface MessageMeta {
-  sources?: string[];
-  followUps?: string[];
-  chart?: ChartData;
-}
 
 interface Message {
   role: "user" | "assistant";
   content: string;
-  meta?: MessageMeta;
 }
 
 interface ChatWidgetProps {
@@ -36,8 +16,6 @@ interface ChatWidgetProps {
 
 type WidgetView = "ferme" | "accroche" | "ouvert";
 
-// ── Constants ───────────────────────────────────────────────────────────────
-
 const ACCENT = "#F15A24";
 const ACCENT_GRAD = "linear-gradient(135deg, #FF7A3D, #EC4E1C)";
 const CHIP_BG = "#FFF7F3";
@@ -45,15 +23,12 @@ const CHIP_BORDER = "#FFE0D2";
 const CHIP_HOVER_BG = "#FFEDE3";
 const CHIP_HOVER_BORDER = "#FFC9AE";
 const MAX_QUESTIONS = 3;
-const META_SEPARATOR = ":::META:::";
 
 const SUGGESTIONS = [
   "Quel canal génère le plus de dons ?",
   "Résume la performance Meta Ads",
   "Compare novembre et décembre",
 ];
-
-// ── Icons ───────────────────────────────────────────────────────────────────
 
 const ChatIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -97,108 +72,6 @@ const ShrinkIcon = () => (
   </svg>
 );
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-
-function parseMetaFromContent(raw: string): { text: string; meta?: MessageMeta } {
-  const idx = raw.indexOf(META_SEPARATOR);
-  if (idx === -1) return { text: raw };
-
-  const text = raw.slice(0, idx).trim();
-  const jsonStr = raw.slice(idx + META_SEPARATOR.length).trim();
-
-  try {
-    const meta = JSON.parse(jsonStr) as MessageMeta;
-    return { text, meta };
-  } catch {
-    return { text };
-  }
-}
-
-// ── Mini Chart Component ────────────────────────────────────────────────────
-
-function MiniChart({ chart }: { chart: ChartData }) {
-  const color = chart.color || ACCENT;
-
-  if (chart.type === "line") {
-    return (
-      <div style={{ width: "100%", height: 140, marginTop: 10 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chart.data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E3E6EB" />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8A93A2" }} />
-            <YAxis tick={{ fontSize: 10, fill: "#8A93A2" }} />
-            <Tooltip
-              contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #E3E6EB" }}
-              formatter={(value) => [Number(value).toLocaleString("fr-BE"), chart.label]}
-            />
-            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={{ r: 3, fill: color }} />
-          </LineChart>
-        </ResponsiveContainer>
-        <div style={{ textAlign: "center", fontSize: 10, color: "#8A93A2", marginTop: 2 }}>{chart.label}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ width: "100%", height: 140, marginTop: 10 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chart.data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E3E6EB" />
-          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8A93A2" }} />
-          <YAxis tick={{ fontSize: 10, fill: "#8A93A2" }} />
-          <Tooltip
-            contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #E3E6EB" }}
-            formatter={(value) => [Number(value).toLocaleString("fr-BE"), chart.label]}
-          />
-          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-      <div style={{ textAlign: "center", fontSize: 10, color: "#8A93A2", marginTop: 2 }}>{chart.label}</div>
-    </div>
-  );
-}
-
-// ── Source Badges ────────────────────────────────────────────────────────────
-
-const SOURCE_COLORS: Record<string, string> = {
-  "Meta Ads": "#1877F2",
-  "Google Ads": "#4285F4",
-  "GA4": "#E37400",
-  "GA4 - Donations": "#10b981",
-  "Mailchimp": "#FFE01B",
-  "Rapport EOY": "#8b5cf6",
-};
-
-function SourceBadges({ sources }: { sources: string[] }) {
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
-      <span style={{ fontSize: 10, color: "#8A93A2", marginRight: 2, lineHeight: "20px" }}>Sources :</span>
-      {sources.map((src) => {
-        const color = SOURCE_COLORS[src] || "#6B7280";
-        return (
-          <span
-            key={src}
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              color,
-              background: `${color}14`,
-              border: `1px solid ${color}30`,
-              borderRadius: 6,
-              padding: "2px 7px",
-              lineHeight: "16px",
-            }}
-          >
-            {src}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Main Component ──────────────────────────────────────────────────────────
-
 export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps) {
   const [view, setView] = useState<WidgetView>("accroche");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -208,7 +81,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
   const [expanded, setExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const chatBodyRef = useRef<HTMLDivElement>(null);
 
   const sessionId = useMemo(() => `s_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, []);
   const isLimitReached = questionCount >= MAX_QUESTIONS;
@@ -224,7 +96,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
   useEffect(() => {
     if (view === "ouvert") inputRef.current?.focus();
   }, [view]);
-
 
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
@@ -267,32 +138,17 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
       const decoder = new TextDecoder();
       if (!reader) throw new Error("No reader");
 
-      let fullContent = "";
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
-        fullContent += chunk;
-
-        // While streaming, show text without meta (hide :::META::: part as it arrives)
-        const displayIdx = fullContent.indexOf(META_SEPARATOR);
-        const displayText = displayIdx === -1 ? fullContent : fullContent.slice(0, displayIdx);
-
         setMessages((prev) => {
           const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: displayText };
+          const last = updated[updated.length - 1];
+          updated[updated.length - 1] = { ...last, content: last.content + chunk };
           return updated;
         });
       }
-
-      // Once streaming is done, parse the meta block
-      const { text, meta } = parseMetaFromContent(fullContent);
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: "assistant", content: text, meta };
-        return updated;
-      });
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -313,11 +169,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     sendMessage(suggestion);
   };
 
-  const handleFollowUpClick = (question: string) => {
-    if (isLimitReached) return;
-    sendMessage(question);
-  };
-
   // Export PDF
   const exportPDF = useCallback(async () => {
     const { jsPDF } = await import("jspdf");
@@ -327,7 +178,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     const maxWidth = pageWidth - margin * 2;
     let y = 20;
 
-    // Title
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
     doc.text("Assistant Data — Conversation", margin, y);
@@ -342,7 +192,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     doc.setTextColor(0, 0, 0);
 
     for (const msg of messages) {
-      // Check page space
       if (y > 270) {
         doc.addPage();
         y = 20;
@@ -369,19 +218,9 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
         y += 4.5;
       }
 
-      // Sources
-      if (msg.meta?.sources?.length) {
-        y += 2;
-        doc.setFontSize(8);
-        doc.setTextColor(130, 130, 130);
-        doc.text(`Sources : ${msg.meta.sources.join(", ")}`, margin, y);
-        y += 4;
-      }
-
       y += 6;
     }
 
-    // Footer
     doc.setFontSize(8);
     doc.setTextColor(160, 160, 160);
     doc.text("Généré par Assistant Data — Adfinitas Belgium", margin, 290);
@@ -389,7 +228,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     doc.save(`conversation-assistant-data-${new Date().toISOString().slice(0, 10)}.pdf`);
   }, [messages, dateRange]);
 
-  // Dimensions based on expanded state
   const panelWidth = expanded ? 600 : 440;
   const panelMaxHeight = expanded ? "calc(100vh - 40px)" : "min(650px, calc(100vh - 120px))";
 
@@ -400,7 +238,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
         @keyframes chatIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
       `}</style>
 
-      {/* ── État accroche : mini-carte avec suggestions ── */}
+      {/* ── État accroche ── */}
       {view === "accroche" && (
         <div
           className="relative w-[340px] overflow-hidden"
@@ -478,7 +316,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
         </div>
       )}
 
-      {/* ── État ouvert : panneau complet ── */}
+      {/* ── État ouvert ── */}
       {view === "ouvert" && (
         <div
           className="flex flex-col overflow-hidden"
@@ -511,7 +349,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
               </div>
             </div>
             <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
-              {/* Export PDF */}
               {messages.length > 0 && !streaming && (
                 <button
                   onClick={exportPDF}
@@ -523,7 +360,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
                   <Download size={14} strokeWidth={2} />
                 </button>
               )}
-              {/* Expand/shrink */}
               <button
                 onClick={() => setExpanded((prev) => !prev)}
                 aria-label={expanded ? "Réduire la fenêtre" : "Agrandir la fenêtre"}
@@ -532,7 +368,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
               >
                 {expanded ? <ShrinkIcon /> : <ExpandIcon />}
               </button>
-              {/* Close */}
               <button
                 onClick={() => setView("accroche")}
                 aria-label="Fermer"
@@ -545,7 +380,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
           </div>
 
           {/* Messages / Suggestions */}
-          <div ref={chatBodyRef} className="flex-1 overflow-y-auto" style={{ padding: "18px 18px 6px" }}>
+          <div className="flex-1 overflow-y-auto" style={{ padding: "18px 18px 6px" }}>
             {messages.length === 0 ? (
               <>
                 <div className="text-[12.5px] mb-3" style={{ color: "#8A93A2" }}>
@@ -582,75 +417,31 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             ) : (
               <div className="space-y-3">
                 {messages.map((msg, i) => (
-                  <div key={i}>
-                    <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className="max-w-[85%] px-3.5 py-2.5 text-[13.5px] whitespace-pre-wrap leading-relaxed"
-                        style={
-                          msg.role === "user"
-                            ? {
-                                background: ACCENT_GRAD,
-                                color: "#fff",
-                                borderRadius: "13px 13px 4px 13px",
-                              }
-                            : {
-                                background: "#F4F5F7",
-                                color: "#2A2F3A",
-                                borderRadius: "13px 13px 13px 4px",
-                                border: "1px solid #E3E6EB",
-                              }
-                        }
-                      >
-                        {msg.content || (
-                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#8A93A2" }} />
-                        )}
-
-                        {/* Chart inline */}
-                        {msg.meta?.chart && msg.meta.chart.data?.length > 0 && (
-                          <MiniChart chart={msg.meta.chart} />
-                        )}
-
-                        {/* Sources */}
-                        {msg.meta?.sources && msg.meta.sources.length > 0 && (
-                          <SourceBadges sources={msg.meta.sources} />
-                        )}
-                      </div>
+                  <div
+                    key={i}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className="max-w-[85%] px-3.5 py-2.5 text-[13.5px] whitespace-pre-wrap leading-relaxed"
+                      style={
+                        msg.role === "user"
+                          ? {
+                              background: ACCENT_GRAD,
+                              color: "#fff",
+                              borderRadius: "13px 13px 4px 13px",
+                            }
+                          : {
+                              background: "#F4F5F7",
+                              color: "#2A2F3A",
+                              borderRadius: "13px 13px 13px 4px",
+                              border: "1px solid #E3E6EB",
+                            }
+                      }
+                    >
+                      {msg.content || (
+                        <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#8A93A2" }} />
+                      )}
                     </div>
-
-                    {/* Follow-up suggestions */}
-                    {msg.meta?.followUps && msg.meta.followUps.length > 0 && !streaming && !isLimitReached && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingLeft: 4 }}>
-                        {msg.meta.followUps.map((q) => (
-                          <button
-                            key={q}
-                            onClick={() => handleFollowUpClick(q)}
-                            style={{
-                              padding: "6px 12px",
-                              borderRadius: 10,
-                              border: `1px solid ${CHIP_BORDER}`,
-                              background: CHIP_BG,
-                              color: ACCENT,
-                              fontSize: 11.5,
-                              fontWeight: 600,
-                              cursor: "pointer",
-                              fontFamily: "inherit",
-                              transition: "all .15s ease",
-                              textAlign: "left",
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = CHIP_HOVER_BG;
-                              e.currentTarget.style.borderColor = CHIP_HOVER_BORDER;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = CHIP_BG;
-                              e.currentTarget.style.borderColor = CHIP_BORDER;
-                            }}
-                          >
-                            {q}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -697,7 +488,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
                   Pour aller plus loin dans l&apos;analyse de vos résultats,
                   contactez notre équipe. Nous serons ravis de vous accompagner.
                 </div>
-                {/* Photo rectangulaire */}
                 <div
                   style={{
                     width: "100%",
