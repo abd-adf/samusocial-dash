@@ -70,38 +70,36 @@ export async function POST(request: NextRequest) {
 - Montants en euros, pourcentages avec 1 décimale.
 - Après 3 questions, propose à l'utilisateur d'envoyer un email à abourdil@adfinitas.be et snechelput@adfinitas.be pour approndir l'analyse
 
-IMPORTANT — FORMAT DE RÉPONSE :
-Tu dois TOUJOURS répondre avec un bloc JSON valide à la fin de ta réponse, séparé par la balise :::META:::
-Ton texte de réponse normal d'abord, puis :::META::: puis le JSON.
-
-Le JSON doit contenir :
-1. "sources" : tableau de sources de données utilisées (ex: ["Meta Ads", "GA4 - Donations", "Google Ads"])
-2. "followUps" : tableau de 2-3 questions de suivi pertinentes basées sur ta réponse
-3. "chart" : (optionnel) si ta réponse contient des données comparatives ou une évolution, inclus un objet chart avec :
-   - "type" : "bar" ou "line"
-   - "data" : tableau d'objets avec "name" (label) et "value" (nombre)
-   - "label" : légende de l'axe Y (ex: "Dépenses (€)", "Impressions", "Dons")
-   - "color" : couleur hex (optionnel, défaut orange)
-
-Exemple de réponse complète :
-Meta Ads a généré 245 dons pour un budget de 12 450€, soit un coût par don de 50,8€. Google Ads affiche un CPA inférieur à 24€ mais avec un volume plus faible. La combinaison des deux canaux optimise le mix acquisition/coût.
-:::META:::
-{"sources":["Meta Ads","Google Ads","GA4 - Donations"],"followUps":["Quel est le ROAS par canal ?","Comment optimiser le budget entre Meta et Google ?","Quelle est l'évolution du coût par don sur les 3 derniers mois ?"],"chart":{"type":"bar","data":[{"name":"Meta Ads","value":50.8},{"name":"Google Ads","value":24}],"label":"Coût par don (€)"}}
-
 Voici le rapport stratégique de la campagne EOY 25 rédigé par Adfinitas :
 
 ${campaignReport}
 
 Voici les données actuelles du dashboard pour la période du ${dateFrom} au ${dateTo} :
 
-${JSON.stringify(dashboardData, null, 2)}`;
+${JSON.stringify(dashboardData, null, 2)}
+
+OBLIGATION ABSOLUE — tu DOIS terminer CHAQUE réponse par exactement ce format, sans exception :
+
+ta réponse texte ici
+:::META:::
+{"sources":["source1","source2"],"followUps":["question 1 ?","question 2 ?","question 3 ?"],"chart":{"type":"bar","data":[{"name":"label1","value":123},{"name":"label2","value":456}],"label":"légende axe Y"}}
+
+Règles du bloc :::META::: :
+- "sources" : OBLIGATOIRE. Les sources de données que tu as utilisées parmi : "Meta Ads", "Google Ads", "GA4", "GA4 - Donations", "Mailchimp", "Rapport EOY"
+- "followUps" : OBLIGATOIRE. Exactement 3 questions de suivi courtes et pertinentes
+- "chart" : inclus-le si ta réponse compare des chiffres ou montre une évolution. "type" : "bar" ou "line". Omets "chart" si non pertinent
+- Le JSON doit être sur UNE SEULE ligne, valide, sans retour à la ligne`;
 
     const messages: { role: "user" | "assistant"; content: string }[] = [];
     if (history && Array.isArray(history)) {
       for (const msg of history) {
+        // Strip :::META::: blocks from previous assistant responses
+        const cleanContent = msg.role === "assistant"
+          ? msg.content.split(":::META:::")[0].trim()
+          : msg.content;
         messages.push({
           role: msg.role as "user" | "assistant",
-          content: msg.content,
+          content: cleanContent,
         });
       }
     }
