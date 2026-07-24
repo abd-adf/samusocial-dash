@@ -1,11 +1,32 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
+import Image from "next/image";
+import {
+  BarChart, Bar, LineChart, Line,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+} from "recharts";
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+interface ChartData {
+  type: "bar" | "line";
+  data: { name: string; value: number }[];
+  label: string;
+  color?: string;
+}
+
+interface MessageMeta {
+  sources?: string[];
+  followUps?: string[];
+  chart?: ChartData;
+}
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  meta?: MessageMeta;
 }
 
 interface ChatWidgetProps {
@@ -15,18 +36,24 @@ interface ChatWidgetProps {
 
 type WidgetView = "ferme" | "accroche" | "ouvert";
 
+// ── Constants ───────────────────────────────────────────────────────────────
+
 const ACCENT = "#F15A24";
 const ACCENT_GRAD = "linear-gradient(135deg, #FF7A3D, #EC4E1C)";
 const CHIP_BG = "#FFF7F3";
 const CHIP_BORDER = "#FFE0D2";
 const CHIP_HOVER_BG = "#FFEDE3";
 const CHIP_HOVER_BORDER = "#FFC9AE";
+const MAX_QUESTIONS = 3;
+const META_SEPARATOR = ":::META:::";
 
 const SUGGESTIONS = [
   "Quel canal génère le plus de dons ?",
   "Résume la performance Meta Ads",
   "Compare novembre et décembre",
 ];
+
+// ── Icons ───────────────────────────────────────────────────────────────────
 
 const ChatIcon = () => (
   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -58,13 +85,132 @@ const ChevronIcon = () => (
   </svg>
 );
 
+const ExpandIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const ShrinkIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+function parseMetaFromContent(raw: string): { text: string; meta?: MessageMeta } {
+  const idx = raw.indexOf(META_SEPARATOR);
+  if (idx === -1) return { text: raw };
+
+  const text = raw.slice(0, idx).trim();
+  const jsonStr = raw.slice(idx + META_SEPARATOR.length).trim();
+
+  try {
+    const meta = JSON.parse(jsonStr) as MessageMeta;
+    return { text, meta };
+  } catch {
+    return { text };
+  }
+}
+
+// ── Mini Chart Component ────────────────────────────────────────────────────
+
+function MiniChart({ chart }: { chart: ChartData }) {
+  const color = chart.color || ACCENT;
+
+  if (chart.type === "line") {
+    return (
+      <div style={{ width: "100%", height: 140, marginTop: 10 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chart.data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E3E6EB" />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8A93A2" }} />
+            <YAxis tick={{ fontSize: 10, fill: "#8A93A2" }} />
+            <Tooltip
+              contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #E3E6EB" }}
+              formatter={(value) => [Number(value).toLocaleString("fr-BE"), chart.label]}
+            />
+            <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={{ r: 3, fill: color }} />
+          </LineChart>
+        </ResponsiveContainer>
+        <div style={{ textAlign: "center", fontSize: 10, color: "#8A93A2", marginTop: 2 }}>{chart.label}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ width: "100%", height: 140, marginTop: 10 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={chart.data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#E3E6EB" />
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#8A93A2" }} />
+          <YAxis tick={{ fontSize: 10, fill: "#8A93A2" }} />
+          <Tooltip
+            contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #E3E6EB" }}
+            formatter={(value) => [Number(value).toLocaleString("fr-BE"), chart.label]}
+          />
+          <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+      <div style={{ textAlign: "center", fontSize: 10, color: "#8A93A2", marginTop: 2 }}>{chart.label}</div>
+    </div>
+  );
+}
+
+// ── Source Badges ────────────────────────────────────────────────────────────
+
+const SOURCE_COLORS: Record<string, string> = {
+  "Meta Ads": "#1877F2",
+  "Google Ads": "#4285F4",
+  "GA4": "#E37400",
+  "GA4 - Donations": "#10b981",
+  "Mailchimp": "#FFE01B",
+  "Rapport EOY": "#8b5cf6",
+};
+
+function SourceBadges({ sources }: { sources: string[] }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 8 }}>
+      <span style={{ fontSize: 10, color: "#8A93A2", marginRight: 2, lineHeight: "20px" }}>Sources :</span>
+      {sources.map((src) => {
+        const color = SOURCE_COLORS[src] || "#6B7280";
+        return (
+          <span
+            key={src}
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color,
+              background: `${color}14`,
+              border: `1px solid ${color}30`,
+              borderRadius: 6,
+              padding: "2px 7px",
+              lineHeight: "16px",
+            }}
+          >
+            {src}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Main Component ──────────────────────────────────────────────────────────
+
 export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps) {
   const [view, setView] = useState<WidgetView>("accroche");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [questionCount, setQuestionCount] = useState(0);
+  const [expanded, setExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const chatBodyRef = useRef<HTMLDivElement>(null);
+
+  const isLimitReached = questionCount >= MAX_QUESTIONS;
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -78,14 +224,16 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
     if (view === "ouvert") inputRef.current?.focus();
   }, [view]);
 
+
   const sendMessage = async (text?: string) => {
     const msg = (text || input).trim();
-    if (!msg || streaming) return;
+    if (!msg || streaming || isLimitReached) return;
 
     const userMsg: Message = { role: "user", content: msg };
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setStreaming(true);
+    setQuestionCount((prev) => prev + 1);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
@@ -94,7 +242,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: msg,
-          history: messages,
+          history: messages.map((m) => ({ role: m.role, content: m.content })),
           dashboardData,
           dateRange,
         }),
@@ -118,17 +266,32 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
       const decoder = new TextDecoder();
       if (!reader) throw new Error("No reader");
 
+      let fullContent = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         const chunk = decoder.decode(value, { stream: true });
+        fullContent += chunk;
+
+        // While streaming, show text without meta (hide :::META::: part as it arrives)
+        const displayIdx = fullContent.indexOf(META_SEPARATOR);
+        const displayText = displayIdx === -1 ? fullContent : fullContent.slice(0, displayIdx);
+
         setMessages((prev) => {
           const updated = [...prev];
-          const last = updated[updated.length - 1];
-          updated[updated.length - 1] = { ...last, content: last.content + chunk };
+          updated[updated.length - 1] = { role: "assistant", content: displayText };
           return updated;
         });
       }
+
+      // Once streaming is done, parse the meta block
+      const { text, meta } = parseMetaFromContent(fullContent);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: "assistant", content: text, meta };
+        return updated;
+      });
     } catch {
       setMessages((prev) => {
         const updated = [...prev];
@@ -144,9 +307,90 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    if (isLimitReached) return;
     setView("ouvert");
     sendMessage(suggestion);
   };
+
+  const handleFollowUpClick = (question: string) => {
+    if (isLimitReached) return;
+    sendMessage(question);
+  };
+
+  // Export PDF
+  const exportPDF = useCallback(async () => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 15;
+    const maxWidth = pageWidth - margin * 2;
+    let y = 20;
+
+    // Title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Assistant Data — Conversation", margin, y);
+    y += 8;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(130, 130, 130);
+    doc.text(`Période : ${dateRange.start} au ${dateRange.end} — Exporté le ${new Date().toLocaleDateString("fr-BE")}`, margin, y);
+    y += 10;
+
+    doc.setTextColor(0, 0, 0);
+
+    for (const msg of messages) {
+      // Check page space
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const isUser = msg.role === "user";
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(isUser ? 241 : 42, isUser ? 90 : 47, isUser ? 36 : 58);
+      doc.text(isUser ? "Vous" : "Assistant", margin, y);
+      y += 5;
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(40, 40, 40);
+      doc.setFontSize(9);
+
+      const lines = doc.splitTextToSize(msg.content, maxWidth);
+      for (const line of lines) {
+        if (y > 280) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(line, margin, y);
+        y += 4.5;
+      }
+
+      // Sources
+      if (msg.meta?.sources?.length) {
+        y += 2;
+        doc.setFontSize(8);
+        doc.setTextColor(130, 130, 130);
+        doc.text(`Sources : ${msg.meta.sources.join(", ")}`, margin, y);
+        y += 4;
+      }
+
+      y += 6;
+    }
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(160, 160, 160);
+    doc.text("Généré par Assistant Data — Adfinitas Belgium", margin, 290);
+
+    doc.save(`conversation-assistant-data-${new Date().toISOString().slice(0, 10)}.pdf`);
+  }, [messages, dateRange]);
+
+  // Dimensions based on expanded state
+  const panelWidth = expanded ? 600 : 440;
+  const panelMaxHeight = expanded ? "calc(100vh - 40px)" : "min(650px, calc(100vh - 120px))";
 
   return (
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3.5">
@@ -158,7 +402,7 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
       {/* ── État accroche : mini-carte avec suggestions ── */}
       {view === "accroche" && (
         <div
-          className="relative w-[300px] overflow-hidden"
+          className="relative w-[340px] overflow-hidden"
           style={{
             background: "#fff",
             borderRadius: 18,
@@ -167,7 +411,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             animation: "chatIn .35s ease",
           }}
         >
-          {/* Header */}
           <div
             className="flex items-center gap-2.5 px-4 py-3.5"
             style={{ background: ACCENT_GRAD }}
@@ -191,7 +434,6 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             </button>
           </div>
 
-          {/* Suggestions */}
           <div className="px-4 py-3.5">
             <div className="text-[12.5px] mb-2.5" style={{ color: "#8A93A2" }}>
               Une question rapide sur vos données ?
@@ -240,13 +482,14 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
         <div
           className="flex flex-col overflow-hidden"
           style={{
-            width: 372,
-            maxHeight: "min(580px, calc(100vh - 120px))",
+            width: panelWidth,
+            maxHeight: panelMaxHeight,
             background: "#fff",
             borderRadius: 20,
             boxShadow: "0 24px 60px rgba(20,20,40,.24)",
             border: "1px solid #EFE3DC",
             animation: "chatIn .3s ease",
+            transition: "width .3s ease, max-height .3s ease",
           }}
         >
           {/* Header */}
@@ -266,18 +509,42 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
                 Posez vos questions sur les données
               </div>
             </div>
-            <button
-              onClick={() => setView("accroche")}
-              aria-label="Fermer"
-              className="absolute top-3.5 right-3.5 flex items-center justify-center border-none text-white text-[16px] leading-none cursor-pointer"
-              style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,.2)" }}
-            >
-              ×
-            </button>
+            <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+              {/* Export PDF */}
+              {messages.length > 0 && !streaming && (
+                <button
+                  onClick={exportPDF}
+                  aria-label="Exporter en PDF"
+                  title="Exporter la conversation"
+                  className="flex items-center justify-center border-none text-white cursor-pointer"
+                  style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,.2)" }}
+                >
+                  <Download size={14} strokeWidth={2} />
+                </button>
+              )}
+              {/* Expand/shrink */}
+              <button
+                onClick={() => setExpanded((prev) => !prev)}
+                aria-label={expanded ? "Réduire la fenêtre" : "Agrandir la fenêtre"}
+                className="flex items-center justify-center border-none text-white cursor-pointer"
+                style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,.2)" }}
+              >
+                {expanded ? <ShrinkIcon /> : <ExpandIcon />}
+              </button>
+              {/* Close */}
+              <button
+                onClick={() => setView("accroche")}
+                aria-label="Fermer"
+                className="flex items-center justify-center border-none text-white text-[16px] leading-none cursor-pointer"
+                style={{ width: 26, height: 26, borderRadius: 8, background: "rgba(255,255,255,.2)" }}
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {/* Messages / Suggestions */}
-          <div className="flex-1 overflow-y-auto" style={{ padding: "18px 18px 6px" }}>
+          <div ref={chatBodyRef} className="flex-1 overflow-y-auto" style={{ padding: "18px 18px 6px" }}>
             {messages.length === 0 ? (
               <>
                 <div className="text-[12.5px] mb-3" style={{ color: "#8A93A2" }}>
@@ -314,31 +581,75 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             ) : (
               <div className="space-y-3">
                 {messages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className="max-w-[85%] px-3.5 py-2.5 text-[13.5px] whitespace-pre-wrap leading-relaxed"
-                      style={
-                        msg.role === "user"
-                          ? {
-                              background: ACCENT_GRAD,
-                              color: "#fff",
-                              borderRadius: "13px 13px 4px 13px",
-                            }
-                          : {
-                              background: "#F4F5F7",
-                              color: "#2A2F3A",
-                              borderRadius: "13px 13px 13px 4px",
-                              border: "1px solid #E3E6EB",
-                            }
-                      }
-                    >
-                      {msg.content || (
-                        <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#8A93A2" }} />
-                      )}
+                  <div key={i}>
+                    <div className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                      <div
+                        className="max-w-[85%] px-3.5 py-2.5 text-[13.5px] whitespace-pre-wrap leading-relaxed"
+                        style={
+                          msg.role === "user"
+                            ? {
+                                background: ACCENT_GRAD,
+                                color: "#fff",
+                                borderRadius: "13px 13px 4px 13px",
+                              }
+                            : {
+                                background: "#F4F5F7",
+                                color: "#2A2F3A",
+                                borderRadius: "13px 13px 13px 4px",
+                                border: "1px solid #E3E6EB",
+                              }
+                        }
+                      >
+                        {msg.content || (
+                          <Loader2 className="w-4 h-4 animate-spin" style={{ color: "#8A93A2" }} />
+                        )}
+
+                        {/* Chart inline */}
+                        {msg.meta?.chart && msg.meta.chart.data?.length > 0 && (
+                          <MiniChart chart={msg.meta.chart} />
+                        )}
+
+                        {/* Sources */}
+                        {msg.meta?.sources && msg.meta.sources.length > 0 && (
+                          <SourceBadges sources={msg.meta.sources} />
+                        )}
+                      </div>
                     </div>
+
+                    {/* Follow-up suggestions */}
+                    {msg.meta?.followUps && msg.meta.followUps.length > 0 && !streaming && !isLimitReached && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8, paddingLeft: 4 }}>
+                        {msg.meta.followUps.map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleFollowUpClick(q)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 10,
+                              border: `1px solid ${CHIP_BORDER}`,
+                              background: CHIP_BG,
+                              color: ACCENT,
+                              fontSize: 11.5,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                              transition: "all .15s ease",
+                              textAlign: "left",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = CHIP_HOVER_BG;
+                              e.currentTarget.style.borderColor = CHIP_HOVER_BORDER;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = CHIP_BG;
+                              e.currentTarget.style.borderColor = CHIP_BORDER;
+                            }}
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <div ref={messagesEndRef} />
@@ -346,51 +657,144 @@ export default function ChatWidget({ dateRange, dashboardData }: ChatWidgetProps
             )}
           </div>
 
-          {/* Input */}
-          <div
-            className="flex gap-2.5 shrink-0"
-            style={{ padding: "14px 16px", borderTop: "1px solid #F0F1F4", marginTop: 12 }}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              placeholder="Votre question..."
-              disabled={streaming}
-              className="flex-1 outline-none disabled:opacity-50"
+          {/* Input or limit message */}
+          {isLimitReached ? (
+            <div
               style={{
-                border: "1px solid #E3E6EB",
-                borderRadius: 13,
-                padding: "12px 14px",
-                fontSize: 13,
-                fontFamily: "inherit",
-              }}
-            />
-            <button
-              onClick={() => sendMessage()}
-              disabled={streaming || !input.trim()}
-              aria-label="Envoyer"
-              className="shrink-0 flex items-center justify-center border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 13,
-                background: ACCENT_GRAD,
+                borderTop: "1px solid #F0F1F4",
+                marginTop: 12,
+                padding: "20px 18px",
+                textAlign: "center",
               }}
             >
-              {streaming ? (
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <SendIcon />
-              )}
-            </button>
-          </div>
+              <div
+                style={{
+                  borderRadius: 16,
+                  background: "linear-gradient(135deg, #FFF7F3 0%, #FFF0E8 100%)",
+                  border: `1px solid ${CHIP_BORDER}`,
+                  padding: "24px 20px",
+                }}
+              >
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    overflow: "hidden",
+                    margin: "0 auto 14px",
+                    border: `3px solid ${ACCENT}`,
+                    boxShadow: "0 4px 16px rgba(241,90,36,.2)",
+                  }}
+                >
+                  <Image
+                    src="/contact-adfinitas.jpg"
+                    alt="Alain Bourdil & Stefaan Nechelput - Adfinitas"
+                    width={80}
+                    height={80}
+                    style={{ objectFit: "cover", width: "100%", height: "100%" }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: "#2A2F3A",
+                    marginBottom: 4,
+                  }}
+                >
+                  Vous avez utilisé vos {MAX_QUESTIONS} questions
+                </div>
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: "#6B7280",
+                    lineHeight: 1.5,
+                    marginBottom: 16,
+                  }}
+                >
+                  Pour aller plus loin dans l&apos;analyse de vos résultats,
+                  contactez notre équipe. Nous serons ravis de vous accompagner.
+                </div>
+                <a
+                  href="mailto:abourdil@adfinitas.be"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 24px",
+                    borderRadius: 12,
+                    background: ACCENT_GRAD,
+                    color: "#fff",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    boxShadow: "0 4px 14px rgba(241,90,36,.3)",
+                    transition: "transform .15s ease, box-shadow .15s ease",
+                    fontFamily: "inherit",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = "translateY(-1px)";
+                    e.currentTarget.style.boxShadow = "0 6px 20px rgba(241,90,36,.4)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = "translateY(0)";
+                    e.currentTarget.style.boxShadow = "0 4px 14px rgba(241,90,36,.3)";
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="4" width="20" height="16" rx="3" stroke="#fff" strokeWidth="1.8"/>
+                    <path d="M2 7l10 7 10-7" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Nous contacter
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="flex gap-2.5 shrink-0"
+              style={{ padding: "14px 16px", borderTop: "1px solid #F0F1F4", marginTop: 12 }}
+            >
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                placeholder="Votre question..."
+                disabled={streaming}
+                className="flex-1 outline-none disabled:opacity-50"
+                style={{
+                  border: "1px solid #E3E6EB",
+                  borderRadius: 13,
+                  padding: "12px 14px",
+                  fontSize: 13,
+                  fontFamily: "inherit",
+                }}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={streaming || !input.trim()}
+                aria-label="Envoyer"
+                className="shrink-0 flex items-center justify-center border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 13,
+                  background: ACCENT_GRAD,
+                }}
+              >
+                {streaming ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <SendIcon />
+                )}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* ── FAB (bouton flottant) — visible dans tous les états sauf ouvert ── */}
+      {/* ── FAB (bouton flottant) ── */}
       {view !== "ouvert" && (
         <div className="relative" style={{ width: 68, height: 68 }}>
           <div
